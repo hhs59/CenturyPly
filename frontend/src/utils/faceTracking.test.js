@@ -27,6 +27,18 @@ test("four-person groups use the same stable-count timing", () => {
   assert.equal(transition.state.expectedCount, 4);
 });
 
+test("countdown value advances on later detection frames", () => {
+  let state = createFaceCountState(1);
+  state = updateFaceCountState(state, 1, 0).state;
+  state = updateFaceCountState(state, 1, 1_000).state;
+
+  let transition = updateFaceCountState(state, 1, 3_001);
+  assert.equal(transition.state.countdownValue, 3);
+
+  transition = updateFaceCountState(transition.state, 1, 4_001);
+  assert.equal(transition.state.countdownValue, 2);
+});
+
 test("a brief mismatch is tolerated, but a sustained mismatch resets", () => {
   let state = createFaceCountState(2);
   state = updateFaceCountState(state, 2, 0).state;

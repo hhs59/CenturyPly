@@ -45,9 +45,7 @@ function GeneratingView({ isGenerating, error, onRetry, onChangePhoto }) {
   return (
     <section className="content-card generation-card" aria-labelledby="generation-heading" aria-busy={isGenerating}>
       <div className="card-heading">
-        <p className="eyebrow">One moment</p>
         <h2 id="generation-heading" tabIndex={-1}>{error ? "The studio paused" : "Creating your portrait"}</h2>
-        <p>{error ? "Your photo is safe. You can try this request again manually." : "Your image is being crafted with one secure generation request."}</p>
       </div>
 
       {isGenerating ? (
@@ -70,7 +68,7 @@ function GeneratingView({ isGenerating, error, onRetry, onChangePhoto }) {
                 <RefreshCw size={19} aria-hidden="true" /> Try again
               </button>
             )}
-            <button className="secondary-button" type="button" onClick={onChangePhoto}>Start over</button>
+            <button className="secondary-button" type="button" onClick={onChangePhoto}>Change photo</button>
           </div>
         </>
       )}

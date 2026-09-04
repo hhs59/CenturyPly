@@ -1,9 +1,9 @@
-import { Camera, RefreshCw, RotateCcw, ScanFace } from "lucide-react";
+import { ArrowRight, RefreshCw, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import ErrorAlert from "./ErrorAlert.jsx";
-import FaceGuideOverlay from "./FaceGuideOverlay.jsx";
 import PhotoPicker from "./PhotoPicker.jsx";
 import { useCamera } from "../hooks/useCamera.js";
+import { validateImageFile } from "../utils/imageValidation.js";
 import {
   createFaceCountState,
   DETECTION_INTERVAL_MS,
@@ -16,25 +16,19 @@ function canvasToBlob(canvas) {
   });
 }
 
-function countMessage(detectedCount, expectedCount) {
-  if (detectedCount < expectedCount) {
-    return `We detect ${detectedCount} of ${expectedCount} ${expectedCount === 1 ? "guest" : "guests"}. Ask everyone to face the camera.`;
-  }
-  if (detectedCount > expectedCount) {
-    return `We detect an extra person. Only ${expectedCount} ${expectedCount === 1 ? "guest" : "guests"} should be in the frame.`;
-  }
-  return "Everyone is ready. Hold still.";
-}
-
 function CameraCapture({
   peopleCount,
+  error,
   faceDetection,
+  isPhotoReady,
   onCancel,
   onCaptured,
   onFileSelected,
   onLog,
   onCameraError,
   onPhaseChange,
+  onProceed,
+  uploadStatus,
 }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -43,12 +37,14 @@ function CameraCapture({
   const phaseRef = useRef("camera_loading");
   const trackerRef = useRef(createFaceCountState(peopleCount));
   const captureInProgressRef = useRef(false);
+  const captureTokenRef = useRef(0);
+  const uploadedPreviewUrlRef = useRef("");
   const mountedRef = useRef(true);
   const [phase, setPhase] = useState("camera_loading");
-  const [faces, setFaces] = useState([]);
-  const [faceCount, setFaceCount] = useState(0);
+  const [countdownValue, setCountdownValue] = useState(null);
   const [captureError, setCaptureError] = useState(null);
-  const { isStarting, isActive, cameraError, startCamera, stopCamera } = useCamera();
+  const [uploadedPreviewUrl, setUploadedPreviewUrl] = useState("");
+  const { isActive, cameraError, startCamera, stopCamera } = useCamera();
   const {
     status: detectorStatus,
     error: detectorError,
@@ -63,6 +59,49 @@ function CameraCapture({
     setPhase(nextPhase);
     onPhaseChange(nextPhase);
   }, [onPhaseChange]);
+
+  const replacePreview = useCallback((file) => {
+    if (uploadedPreviewUrlRef.current) {
+      URL.revokeObjectURL(uploadedPreviewUrlRef.current);
+      uploadedPreviewUrlRef.current = "";
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(file);
+    uploadedPreviewUrlRef.current = nextPreviewUrl;
+    setUploadedPreviewUrl(nextPreviewUrl);
+  }, []);
+
+  const handleFileSelected = useCallback((file) => {
+    if (phaseRef.current === "countdown" || phaseRef.current === "capture_check") {
+      captureTokenRef.current += 1;
+      captureInProgressRef.current = false;
+      trackerRef.current = createFaceCountState(peopleCount);
+      setCountdownValue(null);
+      setCaptureError(null);
+      if (phaseRef.current === "capture_check") {
+        stopCamera();
+      }
+      setCameraPhase("aligning");
+    }
+
+    const imageValidation = validateImageFile(file);
+    if (imageValidation.valid) {
+      replacePreview(file);
+    } else {
+      if (uploadedPreviewUrlRef.current) {
+        URL.revokeObjectURL(uploadedPreviewUrlRef.current);
+        uploadedPreviewUrlRef.current = "";
+      }
+      setUploadedPreviewUrl("");
+    }
+    onFileSelected(file);
+  }, [onFileSelected, peopleCount, replacePreview, setCameraPhase, stopCamera]);
+
+  useEffect(() => () => {
+    if (uploadedPreviewUrlRef.current) {
+      URL.revokeObjectURL(uploadedPreviewUrlRef.current);
+    }
+  }, []);
 
   const reportError = useCallback((error) => {
     if (!mountedRef.current) {
@@ -80,8 +119,7 @@ function CameraCapture({
 
   const resetAlignment = useCallback(() => {
     trackerRef.current = createFaceCountState(peopleCount);
-    setFaceCount(0);
-    setFaces([]);
+    setCountdownValue(null);
     setCaptureError(null);
     setCameraPhase("aligning");
   }, [peopleCount, setCameraPhase]);
@@ -90,8 +128,11 @@ function CameraCapture({
     if (captureInProgressRef.current) {
       return;
     }
+    const captureToken = captureTokenRef.current + 1;
+    captureTokenRef.current = captureToken;
     captureInProgressRef.current = true;
     setCameraPhase("capture_check");
+    setCountdownValue(null);
     setCaptureError(null);
     onLog({ level: "info", event: "capture_started", message: "Capturing the high-resolution group photo." });
 
@@ -117,6 +158,9 @@ function CameraCapture({
       context.restore();
 
       const blob = await canvasToBlob(canvas);
+      if (!mountedRef.current || captureTokenRef.current !== captureToken || !captureInProgressRef.current) {
+        return;
+      }
       if (!blob || !blob.size) {
         throw new Error("The photo could not be captured. Please try again.");
       }
@@ -125,10 +169,13 @@ function CameraCapture({
         lastModified: Date.now(),
       });
       const finalDetection = await detectImage(file);
+      if (!mountedRef.current || captureTokenRef.current !== captureToken || !captureInProgressRef.current) {
+        return;
+      }
       if (finalDetection.count !== peopleCount) {
         const mismatchError = {
           code: "CAPTURE_COUNT_MISMATCH",
-          message: `The captured photo shows ${finalDetection.count} of ${peopleCount} ${peopleCount === 1 ? "guest" : "guests"}. Please hold position and try again.`,
+          message: "Please hold position and try again.",
           retryable: true,
         };
         onLog({
@@ -138,13 +185,14 @@ function CameraCapture({
           details: { detected_count: finalDetection.count, expected_count: peopleCount },
         });
         trackerRef.current = createFaceCountState(peopleCount);
-        setFaceCount(finalDetection.count);
         setCaptureError(mismatchError);
         setCameraPhase("aligning");
         return;
       }
 
       stopCamera();
+      replacePreview(file);
+      setCameraPhase("photo_ready");
       onLog({
         level: "success",
         event: "capture_validated",
@@ -153,6 +201,9 @@ function CameraCapture({
       });
       onCaptured(file, { width, height, faceCount: finalDetection.count });
     } catch (error) {
+      if (!mountedRef.current || captureTokenRef.current !== captureToken || !captureInProgressRef.current) {
+        return;
+      }
       const mappedError = error?.code === "FACE_DETECTION_FAILED"
         ? error
         : { code: "CAPTURE_FAILED", message: error?.message || "The photo could not be captured. Please try again.", retryable: true };
@@ -160,21 +211,22 @@ function CameraCapture({
       setCameraPhase("aligning");
       onCameraError(mappedError);
     } finally {
-      captureInProgressRef.current = false;
+      if (captureTokenRef.current === captureToken) {
+        captureInProgressRef.current = false;
+      }
     }
-  }, [detectImage, onCameraError, onCaptured, onLog, peopleCount, setCameraPhase, stopCamera]);
+  }, [detectImage, onCameraError, onCaptured, onLog, peopleCount, replacePreview, setCameraPhase, stopCamera]);
 
   const handleDetection = useCallback((result, timestamp) => {
-    if (!mountedRef.current || captureInProgressRef.current) {
+    if (!mountedRef.current || captureInProgressRef.current || uploadedPreviewUrlRef.current) {
       return;
     }
-    setFaces(result.faces);
-    setFaceCount(result.count);
     if (result.count === peopleCount) {
       setCaptureError((current) => current?.code === "CAPTURE_COUNT_MISMATCH" ? null : current);
     }
     const transition = updateFaceCountState(trackerRef.current, result.count, timestamp);
     trackerRef.current = transition.state;
+    setCountdownValue(transition.state.countdownValue);
 
     if (transition.event === "countdown_started") {
       onLog({ level: "success", event: "count_stable", message: "The selected guest count stayed stable for one second." });
@@ -190,7 +242,7 @@ function CameraCapture({
     if (transition.state.phase !== phaseRef.current) {
       setCameraPhase(transition.state.phase);
     }
-  }, [capturePhoto, onLog, setCameraPhase]);
+  }, [capturePhoto, onLog, peopleCount, setCameraPhase]);
 
   useEffect(() => {
     let cancelled = false;
@@ -228,7 +280,7 @@ function CameraCapture({
   }, [ensureReady, onLog, reportError, setCameraPhase, startCamera, stopCamera]);
 
   useEffect(() => {
-    if (!isActive || detectorStatus !== "ready" || phase === "error" || phase === "capture_check") {
+    if (!isActive || detectorStatus !== "ready" || phase === "error" || phase === "capture_check" || uploadStatus === "checking" || uploadedPreviewUrl) {
       return undefined;
     }
 
@@ -259,7 +311,7 @@ function CameraCapture({
       cancelled = true;
       window.cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [detectVideo, detectorStatus, handleDetection, isActive, phase, reportError]);
+  }, [detectVideo, detectorStatus, handleDetection, isActive, phase, reportError, uploadStatus, uploadedPreviewUrl]);
 
   async function handleRetryDetector() {
     setCaptureError(null);
@@ -280,38 +332,28 @@ function CameraCapture({
     onCancel();
   }
 
-  const visibleError = captureError || cameraError || (detectorStatus === "error" ? detectorError : null);
+  const cameraErrorState = captureError || cameraError || (detectorStatus === "error" ? detectorError : null) || error;
+  const visibleError = uploadStatus === "checking" ? null : cameraErrorState;
   const isDetectorError = detectorStatus === "error";
-  const statusText = phase === "camera_loading"
-    ? (isStarting ? "Requesting camera access…" : "Preparing face detection…")
-    : phase === "capture_check"
-      ? "Checking the captured photo…"
-      : phase === "countdown"
-        ? (trackerRef.current.detectedCount === peopleCount
-          ? "Hold still — capturing soon"
-          : "Hold still — checking the group")
-        : countMessage(faceCount, peopleCount);
+  const isUploadLocked = uploadStatus === "checking";
 
   return (
-    <section className="content-card camera-card" aria-labelledby="camera-heading">
-      <div className="camera-card-heading">
-        <div>
-          <p className="eyebrow">Live alignment</p>
-          <h2 id="camera-heading">Fit {peopleCount} {peopleCount === 1 ? "guest" : "guests"} in the frame</h2>
+    <section className="content-card camera-card" aria-label={isPhotoReady ? "Review your photo" : "Camera capture"}>
+      {isPhotoReady && (
+        <div className="camera-card-heading">
+          <h2 id="camera-heading">Review your photo</h2>
         </div>
-        <span className="camera-count-pill"><ScanFace size={16} aria-hidden="true" /> {faceCount}/{peopleCount}</span>
-      </div>
+      )}
 
-      <div className="camera-frame" aria-label="Live camera preview">
+      <div className="camera-frame" aria-label={isPhotoReady ? "Photo preview" : uploadedPreviewUrl ? "Uploaded photo preview" : "Live camera preview"}>
         <video ref={videoRef} className="camera-video" playsInline muted autoPlay />
-        <FaceGuideOverlay faces={faces} width={videoRef.current?.videoWidth} height={videoRef.current?.videoHeight} />
-        <div className={`camera-status${visibleError ? " camera-status-error" : ""}`} aria-live="polite">
-          {visibleError ? "Face detection needs attention" : statusText}
-        </div>
-        {phase === "countdown" && trackerRef.current.countdownValue && (
+        {uploadedPreviewUrl ? (
+          <img className="uploaded-photo-preview" src={uploadedPreviewUrl} alt="Uploaded group photo preview" />
+        ) : null}
+        {phase === "countdown" && countdownValue && (
           <div className="countdown-overlay" role="timer" aria-live="assertive">
             <span>Get ready</span>
-            <strong>{trackerRef.current.countdownValue}</strong>
+            <strong>{countdownValue}</strong>
           </div>
         )}
         {phase === "capture_check" && <div className="capture-check-overlay"><span className="mini-spinner" /> Checking final frame</div>}
@@ -320,26 +362,54 @@ function CameraCapture({
       <canvas ref={canvasRef} className="visually-hidden" aria-hidden="true" />
       <ErrorAlert error={visibleError} />
 
-      {visibleError ? (
+      {isPhotoReady ? (
+        <div className="photo-review-actions">
+          <button className="secondary-button" type="button" onClick={handleCancel}>
+            <RotateCcw size={17} aria-hidden="true" /> Back
+          </button>
+          <PhotoPicker
+            buttonClassName="secondary-button"
+            disabled={uploadStatus === "checking"}
+            label="Upload image"
+            onFileSelected={handleFileSelected}
+          />
+          <button className="primary-button" type="button" onClick={onProceed} disabled={uploadStatus === "checking"}>
+            Continue <ArrowRight size={19} aria-hidden="true" />
+          </button>
+        </div>
+      ) : visibleError ? (
         <div className="camera-fallback">
-          <p>{isDetectorError ? "Face detection could not start. Retry it or use a photo instead." : "You can use a photo instead."}</p>
           {isDetectorError && (
             <button className="secondary-button" type="button" onClick={handleRetryDetector}>
               <RefreshCw size={18} aria-hidden="true" /> Retry face detection
             </button>
           )}
-          <PhotoPicker onFileSelected={onFileSelected} buttonClassName="primary-button" label="Upload a photo" />
+          <PhotoPicker
+            onFileSelected={handleFileSelected}
+            buttonClassName="primary-button"
+            disabled={isUploadLocked}
+            label="Upload image"
+          />
         </div>
       ) : (
-        <p className="camera-instruction" role="status">
-          The countdown starts after the exact count stays steady for one second.
-        </p>
+        <div className="camera-actions">
+          <button className="secondary-button" type="button" onClick={handleCancel}>
+            <RotateCcw size={17} aria-hidden="true" /> Back
+          </button>
+          <PhotoPicker
+            buttonClassName="primary-button"
+            disabled={isUploadLocked}
+            label="Upload image"
+            onFileSelected={handleFileSelected}
+          />
+        </div>
       )}
 
-      <button className="text-button" type="button" onClick={handleCancel}>
-        <RotateCcw size={17} aria-hidden="true" /> Back to setup
-      </button>
-      <p className="camera-local-note"><Camera size={14} aria-hidden="true" /> Nothing is uploaded while the camera is aligning.</p>
+      {!isPhotoReady && visibleError && (
+        <button className="text-button" type="button" onClick={handleCancel}>
+          <RotateCcw size={17} aria-hidden="true" /> Back
+        </button>
+      )}
     </section>
   );
 }

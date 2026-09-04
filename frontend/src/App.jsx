@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import CameraCapture from "./components/CameraCapture.jsx";
 import GeneratingView from "./components/GeneratingView.jsx";
 import LogViewer from "./components/LogViewer.jsx";
+import PeopleCountStep from "./components/PeopleCountStep.jsx";
 import ResultView from "./components/ResultView.jsx";
-import SetupView from "./components/SetupView.jsx";
+import ScenarioStep from "./components/ScenarioStep.jsx";
 import { SCENARIO_IDS, getScenario } from "./config/scenarios.js";
 import { useFaceDetection } from "./hooks/useFaceDetection.js";
 import { dataUrlToBlob, GenerationApiError, generateImage } from "./services/generationApi.js";
@@ -11,11 +12,11 @@ import { downloadBlob, sharePortrait } from "./utils/downloadShare.js";
 import { validateImageFile } from "./utils/imageValidation.js";
 import { createAppError, createLogEntry, mergeLogEntries } from "./utils/logging.js";
 
-const CAMERA_STEPS = new Set(["camera_loading", "aligning", "countdown", "capture_check", "camera_error"]);
+const CAMERA_STEPS = new Set(["camera_loading", "aligning", "countdown", "capture_check", "camera_error", "photo_ready"]);
 
 function createInitialState() {
   return {
-    step: "setup",
+    step: "scenario",
     peopleCount: null,
     scenarioId: "",
     photoFile: null,
@@ -34,7 +35,7 @@ function normalizeScenarioId(value) {
   return String(value ?? "").trim().toLowerCase();
 }
 
-function setupError(message = "Choose the guest count and a Vietnamese scenario first.") {
+function setupError(message = "Choose a Vietnamese scenario and guest count first.") {
   return createAppError({ code: "SETUP_REQUIRED", message, retryable: false, field: "setup" });
 }
 
@@ -90,16 +91,17 @@ function App() {
 
     const imageValidation = validateImageFile(file);
     const normalizedScenarioId = normalizeScenarioId(scenarioId);
-    if (!peopleCount || ![1, 2, 3, 4].includes(peopleCount) || !SCENARIO_IDS.has(normalizedScenarioId)) {
-      appendLog({ level: "warning", event: "setup_validation_failed", message: "Choose the guest count and a Vietnamese scenario first." });
-      setState((current) => ({ ...current, step: "setup", error: setupError() }));
+    const validScenario = SCENARIO_IDS.has(normalizedScenarioId);
+    if (!peopleCount || ![1, 2, 3, 4].includes(peopleCount) || !validScenario) {
+      appendLog({ level: "warning", event: "setup_validation_failed", message: "Choose a Vietnamese scenario and guest count first." });
+      setState((current) => ({ ...current, step: validScenario ? "people" : "scenario", error: setupError() }));
       return;
     }
     if (!imageValidation.valid) {
       appendLog({ level: "warning", event: "photo_validation_failed", message: imageValidation.message, details: { code: imageValidation.code } });
       setState((current) => ({
         ...current,
-        step: "setup",
+        step: "people",
         error: createAppError({ code: imageValidation.code, message: imageValidation.message, retryable: false, field: "photo" }),
       }));
       return;
@@ -200,7 +202,7 @@ function App() {
   }, [appendLog]);
 
   const handleCameraCancel = useCallback(() => {
-    setState((current) => ({ ...current, step: "setup", error: null, uploadStatus: "idle" }));
+    setState((current) => ({ ...current, step: "people", photoFile: null, error: null, uploadStatus: "idle" }));
   }, []);
 
   const handleCaptured = useCallback((file, dimensions) => {
@@ -210,8 +212,18 @@ function App() {
       message: "The camera photo passed the final face-count check.",
       details: { mime_type: file.type, byte_count: file.size, width: dimensions.width, height: dimensions.height },
     });
-    void startGeneration({ file, peopleCount: state.peopleCount, scenarioId: state.scenarioId });
-  }, [appendLog, startGeneration, state.peopleCount, state.scenarioId]);
+    setState((current) => ({
+      ...current,
+      step: "photo_ready",
+      photoFile: file,
+      error: null,
+      uploadStatus: "idle",
+    }));
+  }, [appendLog]);
+
+  const handlePhotoProceed = useCallback(() => {
+    void startGeneration();
+  }, [startGeneration]);
 
   const handleUploadSelected = useCallback(async (file) => {
     if (uploadCheckInFlightRef.current || generationInFlightRef.current) {
@@ -228,22 +240,34 @@ function App() {
       appendLog({ level: "warning", event: "photo_validation_failed", message: imageValidation.message, details: { code: imageValidation.code } });
       setState((current) => ({
         ...current,
+        step: current.step === "photo_ready" ? "aligning" : current.step,
+        photoFile: current.step === "photo_ready" ? null : current.photoFile,
         error: createAppError({ code: imageValidation.code, message: imageValidation.message, retryable: false, field: "photo" }),
       }));
       return;
     }
 
     uploadCheckInFlightRef.current = true;
-    setState((current) => ({ ...current, step: "setup", uploadStatus: "checking", error: null }));
+    setState((current) => ({
+      ...current,
+      step: current.step === "photo_ready" ? "aligning" : current.step,
+      photoFile: current.step === "photo_ready" ? null : current.photoFile,
+      uploadStatus: "checking",
+      error: null,
+    }));
     appendLog({ level: "info", event: "photo_check_started", message: "Checking the uploaded photo locally." });
     try {
       const detection = await faceDetection.detectImage(file);
       if (detection.count !== expectedCount) {
-        const message = `We detect ${detection.count} ${detection.count === 1 ? "guest" : "guests"}, but you selected ${expectedCount}. Choose another photo.`;
-        appendLog({ level: "warning", event: "photo_count_mismatch", message, details: { detected_count: detection.count, expected_count: expectedCount } });
+        const message = "Choose another photo.";
+        appendLog({
+          level: "warning",
+          event: "photo_count_mismatch",
+          message: "Uploaded photo did not match the selected guest count.",
+          details: { detected_count: detection.count, expected_count: expectedCount },
+        });
         setState((current) => ({
           ...current,
-          step: "setup",
           uploadStatus: "idle",
           error: createAppError({ code: "UPLOAD_COUNT_MISMATCH", message, retryable: false, field: "photo" }),
         }));
@@ -255,7 +279,13 @@ function App() {
         message: "The uploaded photo matches the selected guest count.",
         details: { detected_count: detection.count },
       });
-      await startGeneration({ file, peopleCount: expectedCount, scenarioId: expectedScenario });
+      setState((current) => ({
+        ...current,
+        step: "photo_ready",
+        photoFile: file,
+        error: null,
+        uploadStatus: "ready",
+      }));
     } catch (error) {
       const mappedError = error?.code === "FACE_DETECTION_FAILED"
         ? error
@@ -263,7 +293,6 @@ function App() {
       appendLog({ level: "error", event: "photo_check_failed", message: mappedError.message, details: { code: mappedError.code } });
       setState((current) => ({
         ...current,
-        step: "setup",
         uploadStatus: "idle",
         error: createAppError({ code: mappedError.code, message: mappedError.message, retryable: mappedError.retryable !== false, field: "photo" }),
       }));
@@ -271,28 +300,46 @@ function App() {
       uploadCheckInFlightRef.current = false;
       setState((current) => current.uploadStatus === "checking" ? { ...current, uploadStatus: "idle" } : current);
     }
-  }, [appendLog, faceDetection.detectImage, startGeneration, state.peopleCount, state.scenarioId]);
+  }, [appendLog, faceDetection.detectImage, state.peopleCount, state.scenarioId]);
 
   function handlePeopleCountChange(peopleCount) {
     setState((current) => ({ ...current, peopleCount, error: null }));
   }
 
   function handleScenarioChange(scenarioId) {
-    setState((current) => ({ ...current, scenarioId, error: null }));
+    setState((current) => ({ ...current, scenarioId: normalizeScenarioId(scenarioId), error: null }));
+  }
+
+  function handleScenarioContinue() {
+    const normalizedScenarioId = normalizeScenarioId(state.scenarioId);
+    if (!SCENARIO_IDS.has(normalizedScenarioId)) {
+      setState((current) => ({ ...current, step: "scenario", error: setupError("Choose a Vietnamese scenario to continue.") }));
+      return;
+    }
+    setState((current) => ({ ...current, step: "people", scenarioId: normalizedScenarioId, error: null }));
+  }
+
+  function handlePeopleBack() {
+    setState((current) => ({ ...current, step: "scenario", error: null, uploadStatus: "idle" }));
   }
 
   function handleStartCamera() {
-    if (!state.peopleCount || !SCENARIO_IDS.has(normalizeScenarioId(state.scenarioId))) {
-      setState((current) => ({ ...current, error: setupError() }));
+    const normalizedScenarioId = normalizeScenarioId(state.scenarioId);
+    if (!SCENARIO_IDS.has(normalizedScenarioId)) {
+      setState((current) => ({ ...current, step: "scenario", error: setupError("Choose a Vietnamese scenario to continue.") }));
+      return;
+    }
+    if (!state.peopleCount || ![1, 2, 3, 4].includes(state.peopleCount)) {
+      setState((current) => ({ ...current, step: "people", error: setupError("Choose the number of guests to continue.") }));
       return;
     }
     appendLog({
       level: "info",
       event: "camera_requested",
       message: "Opening the camera for local group alignment.",
-      details: { people_count: state.peopleCount, scenario_id: state.scenarioId },
+      details: { people_count: state.peopleCount, scenario_id: normalizedScenarioId },
     });
-    setState((current) => ({ ...current, step: "camera_loading", error: null }));
+    setState((current) => ({ ...current, step: "camera_loading", scenarioId: normalizedScenarioId, error: null }));
   }
 
   function handleStartOver() {
@@ -304,7 +351,7 @@ function App() {
     revokeResultUrl();
     setState((current) => ({
       ...current,
-      step: "setup",
+      step: "people",
       photoFile: null,
       resultBlob: null,
       resultUrl: "",
@@ -352,14 +399,18 @@ function App() {
     if (CAMERA_STEPS.has(state.step)) {
       return (
         <CameraCapture
+          error={state.error}
           faceDetection={faceDetection}
+          isPhotoReady={state.step === "photo_ready"}
           onCancel={handleCameraCancel}
           onCaptured={handleCaptured}
           onCameraError={handleCameraError}
           onFileSelected={handleUploadSelected}
           onLog={appendLog}
           onPhaseChange={handleCameraPhaseChange}
+          onProceed={handlePhotoProceed}
           peopleCount={state.peopleCount}
+          uploadStatus={state.uploadStatus}
         />
       );
     }
@@ -385,16 +436,24 @@ function App() {
         />
       );
     }
+    if (state.step === "people") {
+      return (
+        <PeopleCountStep
+          error={state.error}
+          onBack={handlePeopleBack}
+          onContinue={handleStartCamera}
+          onPeopleCountChange={handlePeopleCountChange}
+          peopleCount={state.peopleCount}
+          scenarioId={state.scenarioId}
+        />
+      );
+    }
     return (
-      <SetupView
+      <ScenarioStep
         error={state.error}
-        onPeopleCountChange={handlePeopleCountChange}
+        onContinue={handleScenarioContinue}
         onScenarioChange={handleScenarioChange}
-        onStartCamera={handleStartCamera}
-        onUploadSelected={handleUploadSelected}
-        peopleCount={state.peopleCount}
         scenarioId={state.scenarioId}
-        uploadStatus={state.uploadStatus}
       />
     );
   }

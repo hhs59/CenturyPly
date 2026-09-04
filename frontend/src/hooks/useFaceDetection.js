@@ -1,7 +1,7 @@
 import { FaceDetector, FilesetResolver } from "@mediapipe/tasks-vision";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const MODEL_ASSET_PATH = "/models/face_detector.tflite";
+const MODEL_ASSET_PATH = "/models/face_detection_full_range_sparse.tflite";
 const WASM_PATH = "/wasm";
 
 function normalizeDetections(result) {

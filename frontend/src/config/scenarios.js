@@ -6,6 +6,7 @@ export const SCENARIOS = [
     clothing: "Silk, brocade, and graceful imperial details",
     setting: "A warm, elegant Hue palace",
     accent: "#dca96b",
+    previewImage: "/concepts/imperial-hue.png",
   },
   {
     id: "temple_aodai",
@@ -14,6 +15,7 @@ export const SCENARIOS = [
     clothing: "Tailored áo dài with subtle embroidery",
     setting: "Historic courtyards in Hanoi",
     accent: "#83c9bd",
+    previewImage: "/concepts/timeless-ao-dai.png",
   },
   {
     id: "hoian_heritage",
@@ -22,6 +24,7 @@ export const SCENARIOS = [
     clothing: "Woven Vietnamese textiles and tasteful details",
     setting: "Lantern-lit Hoi An at blue hour",
     accent: "#ef9e72",
+    previewImage: "/concepts/hoian-heritage.png",
   },
 ];
 
