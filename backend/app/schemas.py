@@ -24,6 +24,7 @@ class GenerationSuccessResponse(BaseModel):
     success: Literal[True] = True
     request_id: str
     result_image: str
+    photo_publish_ticket: str = ""
     logs: list[LogEntry]
 
 

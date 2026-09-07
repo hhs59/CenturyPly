@@ -17,6 +17,9 @@ frontend/dist/
 frontend/.vite/
 npm-debug.log*
 
+# Local dashboard history and captured/generated session media
+backend/data/
+
 # Editors and operating systems
 .vscode/
 .idea/

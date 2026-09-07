@@ -93,7 +93,7 @@ export async function generateImage({ peopleCount, scenarioId, file, signal }) {
         status: response.status,
       });
     }
-    return { requestId: payload.request_id, resultImage: payload.result_image };
+    return { requestId: payload.request_id, resultImage: payload.result_image, publishTicket: payload.photo_publish_ticket || "" };
   }
 
   const errorCode = typeof payload?.error?.code === "string" ? payload.error.code : "GENERATION_FAILED";

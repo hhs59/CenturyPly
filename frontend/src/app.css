@@ -988,6 +988,28 @@ summary:focus-visible {
   text-align: center;
 }
 
+.photo-qr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px auto;
+}
+
+.photo-qr img { display: block; width: 180px; height: 180px; border-radius: 12px; }
+.photo-qr p { margin: 0; }
+.result-delivery { display: flex; align-items: center; justify-content: center; gap: 32px; margin-bottom: 20px; }
+.result-delivery .result-image-frame { margin: 0; }
+.result-delivery .photo-qr { margin: 0; flex-shrink: 0; }
+.phone-photo-shell { min-height: 100dvh; padding: 24px 16px; overflow-y: auto; }
+.phone-photo-panel { width: min(100%, 520px); max-width: 520px; flex: none; overflow: visible; text-align: center; padding: 24px; margin: auto; }
+.phone-portrait { display: block; width: 100%; height: auto; border-radius: 12px; margin: 20px auto; }
+.phone-photo-panel .primary-button { width: 100%; }
+@media (max-width: 600px) {
+  .result-delivery { flex-direction: column; gap: 16px; }
+}
+
 .result-card {
   max-width: 920px;
   justify-content: flex-start;
@@ -1036,6 +1058,11 @@ summary:focus-visible {
 .result-actions .primary-button,
 .result-actions .secondary-button {
   width: 100%;
+}
+
+.result-actions-single {
+  grid-template-columns: minmax(0, 280px);
+  justify-content: center;
 }
 
 @keyframes spin {

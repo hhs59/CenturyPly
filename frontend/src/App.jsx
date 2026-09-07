@@ -7,8 +7,8 @@ import ScenarioStep from "./components/ScenarioStep.jsx";
 import { SCENARIO_IDS, getScenario } from "./config/scenarios.js";
 import { useFaceDetection } from "./hooks/useFaceDetection.js";
 import Dashboard from "./pages/Dashboard.jsx";
+import PhotoDownload from "./pages/PhotoDownload.jsx";
 import { dataUrlToBlob, GenerationApiError, generateImage } from "./services/generationApi.js";
-import { downloadBlob } from "./utils/downloadShare.js";
 import { validateImageFile } from "./utils/imageValidation.js";
 import { createAppError } from "./utils/logging.js";
 import { createPhotoJacket } from "./utils/photoJacket.js";
@@ -25,6 +25,7 @@ function createInitialState() {
     resultBlob: null,
     resultUrl: "",
     generationRequestId: "",
+    photoPublishTicket: "",
     isGenerating: false,
     error: null,
   };
@@ -36,19 +37,6 @@ function normalizeScenarioId(value) {
 
 function setupError(message = "Choose a Vietnamese scenario and guest count first.") {
   return createAppError({ code: "SETUP_REQUIRED", message, retryable: false, field: "setup" });
-}
-
-function trackDashboardAction(requestId, action) {
-  if (!requestId) {
-    return;
-  }
-  void fetch(`/api/dashboard/sessions/${encodeURIComponent(requestId)}/action`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action }),
-  }).catch(() => {
-    // Analytics should never interrupt the booth interaction.
-  });
 }
 
 function PhotoboothApp() {
@@ -114,6 +102,7 @@ function PhotoboothApp() {
       resultBlob: null,
       resultUrl: "",
       generationRequestId: "",
+      photoPublishTicket: "",
       isGenerating: true,
       error: null,
     }));
@@ -135,6 +124,7 @@ function PhotoboothApp() {
         resultBlob: blob,
         resultUrl,
         generationRequestId: response.requestId,
+        photoPublishTicket: response.publishTicket,
         isGenerating: false,
         error: null,
       }));
@@ -245,19 +235,6 @@ function PhotoboothApp() {
     }));
   }
 
-  function handleDownload() {
-    try {
-      downloadBlob({
-        blob: state.resultBlob,
-        objectUrl: state.resultUrl,
-        name: getScenario(state.scenarioId)?.name,
-      });
-      trackDashboardAction(state.generationRequestId, "download");
-    } catch {
-      // Keep download failures out of the guest flow; successful actions remain in the dashboard.
-    }
-  }
-
   function renderStep() {
     if (CAMERA_STEPS.has(state.step)) {
       return (
@@ -288,9 +265,9 @@ function PhotoboothApp() {
       return (
         <ResultView
           displayUrl={state.resultUrl}
-          onDownload={handleDownload}
           onStartOver={handleStartOver}
           resultBlob={state.resultBlob}
+          publishTicket={state.photoPublishTicket}
           scenarioName={getScenario(state.scenarioId)?.name}
         />
       );
@@ -347,6 +324,8 @@ function PhotoboothApp() {
 
 function App() {
   const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
+  const photoRoute = /^\/photo\/([^/]+)$/.exec(pathname);
+  if (photoRoute) return <PhotoDownload token={photoRoute[1]} />;
   if (pathname === "/dashboard" || pathname === "/admin/dashboard") {
     return <Dashboard />;
   }

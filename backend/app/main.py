@@ -4,14 +4,19 @@ import base64
 from pathlib import Path
 import time
 import uuid
+import asyncio
+import logging
+from contextlib import asynccontextmanager, suppress
 from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
+from starlette.concurrency import run_in_threadpool
 
 from .config import get_settings
 from .dashboard_store import DashboardStore
+from .photo_api import PhotoService, create_photo_router
 from .logging_utils import RequestLogger
 from .prompts import ALLOWED_PEOPLE_COUNTS, SCENARIO_IDS, build_image_generation_prompt
 from .schemas import (
@@ -37,7 +42,29 @@ FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
 settings = get_settings()
 image_service = ImageGenerationService(settings)
 dashboard_store = DashboardStore(settings.dashboard_data_dir, settings.dashboard_timezone)
-app = FastAPI(title="Century Ply AI Photobooth API", version="0.1.0")
+photo_service = PhotoService(settings)
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    async def cleanup_photos():
+        while True:
+            try:
+                await run_in_threadpool(photo_service.cleanup)
+            except Exception:
+                logging.getLogger(__name__).exception("QR photo cleanup failed")
+            await asyncio.sleep(3600)
+    task = asyncio.create_task(cleanup_photos())
+    try:
+        yield
+    finally:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+
+app = FastAPI(title="Century Ply AI Photobooth API", version="0.1.0", lifespan=lifespan)
+app.include_router(create_photo_router(photo_service))
 
 app.add_middleware(
     CORSMiddleware,
@@ -75,7 +102,17 @@ def health() -> HealthResponse:
 
 @app.get("/api/dashboard/overview")
 def dashboard_overview() -> dict[str, Any]:
-    return dashboard_store.overview()
+    result = dashboard_store.overview()
+    result["total_downloads"] = sum(_qr_counts().values())
+    return result
+
+
+def _qr_counts():
+    try:
+        return photo_service.store.counts()
+    except Exception:
+        logging.getLogger(__name__).exception("QR download metrics unavailable")
+        return {}
 
 
 @app.get("/api/dashboard/sessions")
@@ -93,6 +130,9 @@ def dashboard_sessions(
         scenario_id=scenario_id,
         status=status,
     )
+    counts = _qr_counts()
+    for session in result["data"]:
+        session["download_count"] = counts.get(session["id"], 0)
     return {"ok": True, **result}
 
 
@@ -124,6 +164,8 @@ def dashboard_session_image(session_id: str, variant: str) -> FileResponse:
 
 @app.post("/api/dashboard/sessions/{session_id}/action")
 def dashboard_session_action(session_id: str, payload: DashboardActionRequest) -> dict[str, Any]:
+    if payload.action == "download":
+        raise HTTPException(status_code=400, detail="Downloads are recorded by the phone download endpoint.")
     if not dashboard_store.record_action(session_id, payload.action):
         raise HTTPException(status_code=404, detail="Dashboard session not found.")
     return {"ok": True, "session_id": session_id, "action": payload.action}
@@ -355,7 +397,13 @@ async def generate(
         except Exception:
             pass
     result_image = f"data:{result.mime_type};base64,{base64.b64encode(result.image_bytes).decode('ascii')}"
-    payload = GenerationSuccessResponse(request_id=request_id, result_image=result_image, logs=logger.entries())
+    ticket = ""
+    try:
+        ticket = photo_service.issue_ticket(request_id, normalized_scenario_id)
+    except Exception:
+        logging.getLogger(__name__).exception("QR publish credential unavailable")
+    payload = GenerationSuccessResponse(request_id=request_id, result_image=result_image,
+                                        photo_publish_ticket=ticket, logs=logger.entries())
     return JSONResponse(status_code=200, content=payload.model_dump(mode="json"))
 
 

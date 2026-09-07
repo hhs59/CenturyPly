@@ -1,5 +1,8 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
+
+from pydantic import Field
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -16,6 +19,14 @@ class Settings(BaseSettings):
     frontend_origin: str = "http://localhost:5173"
     dashboard_data_dir: Path = PROJECT_ROOT / "backend" / "data"
     dashboard_timezone: str = "Asia/Ho_Chi_Minh"
+    photo_storage_provider: Literal["local", "firebase"] = "local"
+    public_app_url: str = ""
+    photo_retention_days: int = Field(default=0, ge=0)
+    photo_signing_secret: str = ""
+    firebase_project_id: str = ""
+    firebase_storage_bucket: str = ""
+    firebase_service_account_json: str = ""
+    firebase_photo_collection: str = "photobooth_photos"
 
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",
