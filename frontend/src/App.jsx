@@ -8,9 +8,10 @@ import { SCENARIO_IDS, getScenario } from "./config/scenarios.js";
 import { useFaceDetection } from "./hooks/useFaceDetection.js";
 import Dashboard from "./pages/Dashboard.jsx";
 import { dataUrlToBlob, GenerationApiError, generateImage } from "./services/generationApi.js";
-import { downloadBlob, sharePortrait } from "./utils/downloadShare.js";
+import { downloadBlob } from "./utils/downloadShare.js";
 import { validateImageFile } from "./utils/imageValidation.js";
 import { createAppError } from "./utils/logging.js";
+import { createPhotoJacket } from "./utils/photoJacket.js";
 
 const CAMERA_STEPS = new Set(["camera_loading", "aligning", "countdown", "capture_check", "camera_error", "photo_ready"]);
 
@@ -24,7 +25,6 @@ function createInitialState() {
     resultBlob: null,
     resultUrl: "",
     generationRequestId: "",
-    uploadStatus: "idle",
     isGenerating: false,
     error: null,
   };
@@ -55,7 +55,6 @@ function PhotoboothApp() {
   const [state, setState] = useState(createInitialState);
   const resultUrlRef = useRef("");
   const generationInFlightRef = useRef(false);
-  const uploadCheckInFlightRef = useRef(false);
   const appHeadingRef = useRef(null);
   const previousStepRef = useRef(state.step);
   const faceDetection = useFaceDetection();
@@ -117,7 +116,6 @@ function PhotoboothApp() {
       generationRequestId: "",
       isGenerating: true,
       error: null,
-      uploadStatus: "idle",
     }));
 
     try {
@@ -126,7 +124,8 @@ function PhotoboothApp() {
         scenarioId: normalizedScenarioId,
         file,
       });
-      const blob = await dataUrlToBlob(response.resultImage);
+      const generatedBlob = await dataUrlToBlob(response.resultImage);
+      const blob = await createPhotoJacket(generatedBlob, getScenario(normalizedScenarioId)?.name);
       const resultUrl = URL.createObjectURL(blob);
       resultUrlRef.current = resultUrl;
       setState((current) => ({
@@ -167,7 +166,11 @@ function PhotoboothApp() {
   }, []);
 
   const handleCameraCancel = useCallback(() => {
-    setState((current) => ({ ...current, step: "people", photoFile: null, error: null, uploadStatus: "idle" }));
+    setState((current) => ({ ...current, step: "people", photoFile: null, error: null }));
+  }, []);
+
+  const handleCameraRetake = useCallback(() => {
+    setState((current) => ({ ...current, step: "camera_loading", photoFile: null, error: null }));
   }, []);
 
   const handleCaptured = useCallback((file) => {
@@ -176,75 +179,12 @@ function PhotoboothApp() {
       step: "photo_ready",
       photoFile: file,
       error: null,
-      uploadStatus: "idle",
     }));
   }, []);
 
   const handlePhotoProceed = useCallback(() => {
     void startGeneration();
   }, [startGeneration]);
-
-  const handleUploadSelected = useCallback(async (file) => {
-    if (uploadCheckInFlightRef.current || generationInFlightRef.current) {
-      return;
-    }
-    const expectedCount = state.peopleCount;
-    const expectedScenario = normalizeScenarioId(state.scenarioId);
-    if (!expectedCount || !SCENARIO_IDS.has(expectedScenario)) {
-      setState((current) => ({ ...current, error: setupError() }));
-      return;
-    }
-    const imageValidation = validateImageFile(file);
-    if (!imageValidation.valid) {
-      setState((current) => ({
-        ...current,
-        step: current.step === "photo_ready" ? "aligning" : current.step,
-        photoFile: current.step === "photo_ready" ? null : current.photoFile,
-        error: createAppError({ code: imageValidation.code, message: imageValidation.message, retryable: false, field: "photo" }),
-      }));
-      return;
-    }
-
-    uploadCheckInFlightRef.current = true;
-    setState((current) => ({
-      ...current,
-      step: current.step === "photo_ready" ? "aligning" : current.step,
-      photoFile: current.step === "photo_ready" ? null : current.photoFile,
-      uploadStatus: "checking",
-      error: null,
-    }));
-    try {
-      const detection = await faceDetection.detectImage(file);
-      if (detection.count !== expectedCount) {
-        const message = "Choose another photo.";
-        setState((current) => ({
-          ...current,
-          uploadStatus: "idle",
-          error: createAppError({ code: "UPLOAD_COUNT_MISMATCH", message, retryable: false, field: "photo" }),
-        }));
-        return;
-      }
-      setState((current) => ({
-        ...current,
-        step: "photo_ready",
-        photoFile: file,
-        error: null,
-        uploadStatus: "ready",
-      }));
-    } catch (error) {
-      const mappedError = error?.code === "FACE_DETECTION_FAILED"
-        ? error
-        : { code: "UPLOAD_CHECK_FAILED", message: "The photo could not be checked. Retry or choose another photo.", retryable: true };
-      setState((current) => ({
-        ...current,
-        uploadStatus: "idle",
-        error: createAppError({ code: mappedError.code, message: mappedError.message, retryable: mappedError.retryable !== false, field: "photo" }),
-      }));
-    } finally {
-      uploadCheckInFlightRef.current = false;
-      setState((current) => current.uploadStatus === "checking" ? { ...current, uploadStatus: "idle" } : current);
-    }
-  }, [faceDetection.detectImage, state.peopleCount, state.scenarioId]);
 
   function handlePeopleCountChange(peopleCount) {
     setState((current) => ({ ...current, peopleCount, error: null }));
@@ -264,7 +204,7 @@ function PhotoboothApp() {
   }
 
   function handlePeopleBack() {
-    setState((current) => ({ ...current, step: "scenario", error: null, uploadStatus: "idle" }));
+    setState((current) => ({ ...current, step: "scenario", error: null }));
   }
 
   function handleStartCamera() {
@@ -283,7 +223,6 @@ function PhotoboothApp() {
       scenarioId: normalizedScenarioId,
       photoFile: null,
       error: null,
-      uploadStatus: "idle",
     }));
   }
 
@@ -319,25 +258,6 @@ function PhotoboothApp() {
     }
   }
 
-  async function handleShare() {
-    try {
-      const result = await sharePortrait({
-        blob: state.resultBlob,
-        objectUrl: state.resultUrl,
-        name: getScenario(state.scenarioId)?.name,
-      });
-      if (result.mode === "cancelled") {
-        return;
-      } else if (result.mode === "download") {
-        trackDashboardAction(state.generationRequestId, "download");
-      } else {
-        trackDashboardAction(state.generationRequestId, "share");
-      }
-    } catch {
-      // Keep share failures out of the guest flow; successful actions remain in the dashboard.
-    }
-  }
-
   function renderStep() {
     if (CAMERA_STEPS.has(state.step)) {
       return (
@@ -347,12 +267,10 @@ function PhotoboothApp() {
           isPhotoReady={state.step === "photo_ready"}
           onCancel={handleCameraCancel}
           onCaptured={handleCaptured}
-          onFileSelected={handleUploadSelected}
           onPhaseChange={handleCameraPhaseChange}
           onProceed={handlePhotoProceed}
-          onTakePhoto={handleStartCamera}
+          onRetake={handleCameraRetake}
           peopleCount={state.peopleCount}
-          uploadStatus={state.uploadStatus}
         />
       );
     }
@@ -371,7 +289,6 @@ function PhotoboothApp() {
         <ResultView
           displayUrl={state.resultUrl}
           onDownload={handleDownload}
-          onShare={handleShare}
           onStartOver={handleStartOver}
           resultBlob={state.resultBlob}
           scenarioName={getScenario(state.scenarioId)?.name}

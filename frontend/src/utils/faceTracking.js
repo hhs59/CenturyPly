@@ -11,6 +11,7 @@ const CAPTURE_ZONE = {
 };
 const MIN_FACE_WIDTH_RATIO = 0.035;
 const MIN_FACE_WIDTH_PX = 30;
+const FOREGROUND_FACE_WIDTH_RATIO = 0.6;
 const FACE_TRACK_DISTANCE_RATIO = 0.075;
 const FACE_TRACK_SIZE_RATIO = 0.45;
 
@@ -100,6 +101,16 @@ export function getCaptureCandidates(faces, frameWidth, frameHeight) {
       && metrics.centerY <= CAPTURE_ZONE.bottom
       && face.width >= minimumFaceWidth;
   });
+}
+
+export function getDominantForegroundFaces(faces, frameWidth, frameHeight) {
+  if (!Array.isArray(faces)) {
+    return [];
+  }
+
+  const validFaces = faces.filter((face) => faceMetrics(face, frameWidth, frameHeight));
+  const largestFaceWidth = Math.max(0, ...validFaces.map((face) => face.width));
+  return validFaces.filter((face) => face.width >= largestFaceWidth * FOREGROUND_FACE_WIDTH_RATIO);
 }
 
 export function selectPrimaryFaces(faces, expectedCount, frameWidth, frameHeight) {

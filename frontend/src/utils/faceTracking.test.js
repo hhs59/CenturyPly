@@ -5,6 +5,7 @@ import {
   countMatchedFaces,
   createFaceCountState,
   getCaptureCandidates,
+  getDominantForegroundFaces,
   selectPrimaryFaces,
   updateFaceCountState,
 } from "./faceTracking.js";
@@ -89,11 +90,43 @@ test("primary faces ignore an extra background face", () => {
     face(-100, 250, 150),
   ];
   const candidates = getCaptureCandidates(detections, FRAME_WIDTH, FRAME_HEIGHT);
-  const primaryFaces = selectPrimaryFaces(candidates, 3, FRAME_WIDTH, FRAME_HEIGHT);
+  const foregroundFaces = getDominantForegroundFaces(candidates, FRAME_WIDTH, FRAME_HEIGHT);
+  const primaryFaces = selectPrimaryFaces(foregroundFaces, 3, FRAME_WIDTH, FRAME_HEIGHT);
 
   assert.equal(candidates.length, 4);
+  assert.equal(foregroundFaces.length, 3);
   assert.equal(primaryFaces.length, 3);
   assert.ok(primaryFaces.every((candidate) => candidate.width >= 145));
+});
+
+test("similarly sized extra faces remain part of the foreground group", () => {
+  const detections = [
+    face(100, 250, 150),
+    face(300, 250, 160),
+    face(500, 250, 145),
+    face(700, 250, 140),
+  ];
+  const candidates = getCaptureCandidates(detections, FRAME_WIDTH, FRAME_HEIGHT);
+  const foregroundFaces = getDominantForegroundFaces(candidates, FRAME_WIDTH, FRAME_HEIGHT);
+
+  assert.equal(foregroundFaces.length, 4);
+});
+
+test("nearby crowd faces are excluded from a four-person foreground group", () => {
+  const detections = [
+    face(551, 226, 77),
+    face(402, 243, 80),
+    face(645, 268, 85),
+    face(486, 274, 79),
+    face(169, 171, 45),
+    face(286, 153, 48),
+  ];
+  const candidates = getCaptureCandidates(detections, 1_024, 559);
+  const foregroundFaces = getDominantForegroundFaces(candidates, 1_024, 559);
+
+  assert.equal(candidates.length, 6);
+  assert.equal(foregroundFaces.length, 4);
+  assert.ok(foregroundFaces.every((candidate) => candidate.width >= 77));
 });
 
 test("locked faces allow slight movement and ignore new faces", () => {

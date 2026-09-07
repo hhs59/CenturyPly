@@ -14,17 +14,17 @@ function mapCameraError(error) {
   const errors = {
     NotAllowedError: {
       code: "CAMERA_PERMISSION_DENIED",
-      message: "Camera permission was denied. You can choose a photo from your gallery instead.",
+      message: "Camera permission was denied. Please try again or ask event staff for help.",
       retryable: true,
     },
     SecurityError: {
       code: "CAMERA_PERMISSION_DENIED",
-      message: "Camera access is blocked here. You can choose a photo from your gallery instead.",
+      message: "Camera access is blocked here. Please try again or ask event staff for help.",
       retryable: true,
     },
     NotFoundError: {
       code: "CAMERA_NOT_FOUND",
-      message: "No camera was found. You can choose a photo from your gallery instead.",
+      message: "No camera was found. Please ask event staff for help.",
       retryable: true,
     },
     NotReadableError: {
@@ -36,7 +36,7 @@ function mapCameraError(error) {
 
   return errors[errorName] || {
     code: "CAMERA_START_FAILED",
-    message: "The camera could not be started. You can choose a photo from your gallery instead.",
+    message: "The camera could not be started. Please try again.",
     retryable: true,
   };
 }
@@ -44,7 +44,7 @@ function mapCameraError(error) {
 function unsupportedCameraError() {
   return {
     code: "CAMERA_UNSUPPORTED",
-    message: "This browser does not support camera access. You can choose a photo from your gallery instead.",
+    message: "This browser does not support camera access. Please ask event staff for help.",
     retryable: true,
   };
 }

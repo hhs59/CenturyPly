@@ -178,7 +178,7 @@ async def generate(
             request_id=request_id,
             logger=logger,
             code="IMAGE_REQUIRED",
-            message="Choose a photo to continue.",
+            message="A captured photo is required to continue.",
             status_code=400,
             retryable=False,
         )
@@ -189,7 +189,7 @@ async def generate(
             request_id=request_id,
             logger=logger,
             code="IMAGE_UNSUPPORTED_TYPE",
-            message="Please choose a JPEG, PNG, or WebP image.",
+            message="The captured photo format is not supported.",
             status_code=400,
             retryable=False,
             details={"mime_type": mime_type or "unknown"},
@@ -205,7 +205,7 @@ async def generate(
             request_id=request_id,
             logger=logger,
             code="IMAGE_EMPTY",
-            message="That image is empty. Please choose another photo.",
+            message="The captured photo is empty. Please try again.",
             status_code=400,
             retryable=False,
         )
@@ -214,7 +214,7 @@ async def generate(
             request_id=request_id,
             logger=logger,
             code="IMAGE_TOO_LARGE",
-            message="That image is larger than 10 MB. Please choose a smaller photo.",
+            message="The captured photo is larger than 10 MB. Please try again.",
             status_code=413,
             retryable=False,
             details={"byte_count": len(image_bytes)},
@@ -251,7 +251,7 @@ async def generate(
             "people_count": people_count,
             "scenario_id": normalized_scenario_id,
             "aspect_ratio": "3:4",
-            "max_tokens": 4096,
+            "response_modalities": ["IMAGE"],
         },
     )
 

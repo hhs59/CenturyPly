@@ -43,7 +43,7 @@ async function loadImageSource(file) {
     const image = await new Promise((resolve, reject) => {
       const element = new Image();
       element.onload = () => resolve(element);
-      element.onerror = () => reject(createDetectionError("The uploaded photo could not be read."));
+      element.onerror = () => reject(createDetectionError("The captured photo could not be read."));
       element.src = objectUrl;
     });
     return {
@@ -117,7 +117,7 @@ export function useFaceDetection() {
       })
       .catch((initializationError) => {
         const mappedError = createDetectionError(
-          "Face detection could not be prepared. Retry or choose a photo instead.",
+          "Face detection could not be prepared. Please try again.",
         );
         mappedError.cause = initializationError;
         updateStatus("error", mappedError);
@@ -166,7 +166,7 @@ export function useFaceDetection() {
 
   const detectImage = useCallback(async (file) => {
     if (!file) {
-      throw createDetectionError("Choose a photo to check.");
+      throw createDetectionError("A captured photo is required for checking.");
     }
     const detector = await ensureReady();
     const imageSource = await loadImageSource(file);
@@ -174,7 +174,11 @@ export function useFaceDetection() {
       return await runExclusive(async () => {
         await detector.setOptions({ runningMode: "IMAGE" });
         try {
-          return normalizeDetections(detector.detect(imageSource.source));
+          return {
+            ...normalizeDetections(detector.detect(imageSource.source)),
+            width: imageSource.source.width || imageSource.source.naturalWidth,
+            height: imageSource.source.height || imageSource.source.naturalHeight,
+          };
         } finally {
           await detector.setOptions({ runningMode: "VIDEO" });
         }
@@ -182,7 +186,7 @@ export function useFaceDetection() {
     } catch (detectionError) {
       const mappedError = detectionError?.code === "FACE_DETECTION_FAILED"
         ? detectionError
-        : createDetectionError("The photo could not be checked. Please choose another photo.");
+        : createDetectionError("The captured photo could not be checked. Please try again.");
       if (mappedError !== detectionError) {
         mappedError.cause = detectionError;
       }

@@ -1,6 +1,6 @@
-import { Download, RotateCcw, Share2 } from "lucide-react";
+import { Download, RotateCcw } from "lucide-react";
 
-function ResultView({ scenarioName, displayUrl, resultBlob, onDownload, onShare, onStartOver }) {
+function ResultView({ scenarioName, displayUrl, resultBlob, onDownload, onStartOver }) {
   return (
     <section className="content-card result-card" aria-labelledby="result-heading">
       <div className="card-heading">
@@ -16,20 +16,14 @@ function ResultView({ scenarioName, displayUrl, resultBlob, onDownload, onShare,
 
       {resultBlob && (
         <div className="result-actions">
-          <button className="secondary-button" type="button" onClick={onShare}>
-            <Share2 size={19} aria-hidden="true" /> Share
+          <button className="secondary-button" type="button" onClick={onStartOver}>
+            <RotateCcw size={17} aria-hidden="true" /> Start over
           </button>
           <button className="primary-button" type="button" onClick={onDownload}>
             <Download size={19} aria-hidden="true" /> Download
           </button>
         </div>
       )}
-
-      <div className="result-secondary-actions">
-        <button className="text-button" type="button" onClick={onStartOver}>
-          <RotateCcw size={17} aria-hidden="true" /> Start over
-        </button>
-      </div>
     </section>
   );
 }

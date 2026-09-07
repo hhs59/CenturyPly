@@ -8,9 +8,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    openrouter_api_key: str = ""
-    openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    image_model: str = "google/gemini-3.1-flash-image"
+    gemini_api_key: str = ""
+    gemini_base_url: str = "https://generativelanguage.googleapis.com/v1"
+    image_model: str = "gemini-3.1-flash-image"
     image_timeout_seconds: float = 120.0
     max_upload_bytes: int = 10_485_760
     frontend_origin: str = "http://localhost:5173"

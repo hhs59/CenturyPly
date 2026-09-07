@@ -1,15 +1,15 @@
-import { ArrowRight, Camera, RefreshCw, RotateCcw } from "lucide-react";
+import { ArrowRight, Camera, RefreshCw, RotateCcw, Upload } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import ErrorAlert from "./ErrorAlert.jsx";
-import PhotoPicker from "./PhotoPicker.jsx";
 import { useCamera } from "../hooks/useCamera.js";
-import { validateImageFile } from "../utils/imageValidation.js";
+import { ACCEPTED_IMAGE_TYPES, validateImageFile } from "../utils/imageValidation.js";
 import {
   areFaceSetsCompatible,
   countMatchedFaces,
   createFaceCountState,
   DETECTION_INTERVAL_MS,
   getCaptureCandidates,
+  getDominantForegroundFaces,
   mirrorFaceBoxes,
   selectPrimaryFaces,
   updateFaceCountState,
@@ -28,11 +28,9 @@ function CameraCapture({
   isPhotoReady,
   onCancel,
   onCaptured,
-  onFileSelected,
   onPhaseChange,
   onProceed,
-  onTakePhoto,
-  uploadStatus,
+  onRetake,
 }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -44,12 +42,12 @@ function CameraCapture({
   const lockedFacesRef = useRef([]);
   const captureInProgressRef = useRef(false);
   const captureTokenRef = useRef(0);
-  const uploadedPreviewUrlRef = useRef("");
+  const photoPreviewUrlRef = useRef("");
+  const uploadRef = useRef(null);
   const mountedRef = useRef(true);
   const [phase, setPhase] = useState("camera_loading");
   const [countdownValue, setCountdownValue] = useState(null);
   const [captureError, setCaptureError] = useState(null);
-  const [uploadedPreviewUrl, setUploadedPreviewUrl] = useState("");
   const { isActive, cameraError, startCamera, stopCamera } = useCamera();
   const {
     status: detectorStatus,
@@ -66,48 +64,19 @@ function CameraCapture({
     onPhaseChange(nextPhase);
   }, [onPhaseChange]);
 
-  const replacePreview = useCallback((file) => {
-    if (uploadedPreviewUrlRef.current) {
-      URL.revokeObjectURL(uploadedPreviewUrlRef.current);
-      uploadedPreviewUrlRef.current = "";
+  const setPhotoPreview = useCallback((file) => {
+    if (photoPreviewUrlRef.current) {
+      URL.revokeObjectURL(photoPreviewUrlRef.current);
+      photoPreviewUrlRef.current = "";
     }
 
     const nextPreviewUrl = URL.createObjectURL(file);
-    uploadedPreviewUrlRef.current = nextPreviewUrl;
-    setUploadedPreviewUrl(nextPreviewUrl);
+    photoPreviewUrlRef.current = nextPreviewUrl;
   }, []);
 
-  const handleFileSelected = useCallback((file) => {
-    candidateFacesRef.current = [];
-    lockedFacesRef.current = [];
-    if (phaseRef.current === "countdown" || phaseRef.current === "capture_check") {
-      captureTokenRef.current += 1;
-      captureInProgressRef.current = false;
-      trackerRef.current = createFaceCountState(peopleCount);
-      setCountdownValue(null);
-      setCaptureError(null);
-      if (phaseRef.current === "capture_check") {
-        stopCamera();
-      }
-      setCameraPhase("aligning");
-    }
-
-    const imageValidation = validateImageFile(file);
-    if (imageValidation.valid) {
-      replacePreview(file);
-    } else {
-      if (uploadedPreviewUrlRef.current) {
-        URL.revokeObjectURL(uploadedPreviewUrlRef.current);
-        uploadedPreviewUrlRef.current = "";
-      }
-      setUploadedPreviewUrl("");
-    }
-    onFileSelected(file);
-  }, [onFileSelected, peopleCount, replacePreview, setCameraPhase, stopCamera]);
-
   useEffect(() => () => {
-    if (uploadedPreviewUrlRef.current) {
-      URL.revokeObjectURL(uploadedPreviewUrlRef.current);
+    if (photoPreviewUrlRef.current) {
+      URL.revokeObjectURL(photoPreviewUrlRef.current);
     }
   }, []);
 
@@ -117,7 +86,7 @@ function CameraCapture({
     }
     const mappedError = error || {
       code: "CAMERA_START_FAILED",
-      message: "The camera could not be started. Choose a photo instead.",
+      message: "The camera could not be started. Please try again.",
       retryable: true,
     };
     setCaptureError(mappedError);
@@ -180,16 +149,18 @@ function CameraCapture({
       if (!mountedRef.current || captureTokenRef.current !== captureToken || !captureInProgressRef.current) {
         return;
       }
+      const finalCandidates = getCaptureCandidates(finalDetection.faces, width, height);
+      const finalForegroundFaces = getDominantForegroundFaces(finalCandidates, width, height);
       const finalMatchedCount = countMatchedFaces(
-        finalDetection.faces,
+        finalForegroundFaces,
         mirrorFaceBoxes(lockedFacesRef.current, width),
         width,
         height,
       );
-      if (finalMatchedCount !== peopleCount) {
+      if (finalForegroundFaces.length !== peopleCount || finalMatchedCount !== peopleCount) {
         const mismatchError = {
           code: "CAPTURE_COUNT_MISMATCH",
-          message: "Please hold position and try again.",
+          message: "Make sure only your selected group is in the photo area.",
           retryable: true,
         };
         trackerRef.current = createFaceCountState(peopleCount);
@@ -201,7 +172,7 @@ function CameraCapture({
       }
 
       stopCamera();
-      replacePreview(file);
+      setPhotoPreview(file);
       setCameraPhase("photo_ready");
       onCaptured(file, { width, height, faceCount: finalMatchedCount });
     } catch (error) {
@@ -218,10 +189,10 @@ function CameraCapture({
         captureInProgressRef.current = false;
       }
     }
-  }, [detectImage, onCaptured, peopleCount, replacePreview, setCameraPhase, stopCamera]);
+  }, [detectImage, onCaptured, peopleCount, setCameraPhase, setPhotoPreview, stopCamera]);
 
   const handleDetection = useCallback((result, timestamp) => {
-    if (!mountedRef.current || captureInProgressRef.current || uploadedPreviewUrlRef.current) {
+    if (!mountedRef.current || captureInProgressRef.current || photoPreviewUrlRef.current) {
       return;
     }
 
@@ -232,12 +203,13 @@ function CameraCapture({
     }
 
     const captureCandidates = getCaptureCandidates(result.faces, frameWidth, frameHeight);
-    const primaryFaces = selectPrimaryFaces(captureCandidates, peopleCount, frameWidth, frameHeight);
+    const foregroundFaces = getDominantForegroundFaces(captureCandidates, frameWidth, frameHeight);
+    const primaryFaces = selectPrimaryFaces(foregroundFaces, peopleCount, frameWidth, frameHeight);
     const isCountdown = trackerRef.current.phase === "countdown";
-    let detectedCount = primaryFaces.length;
+    let detectedCount = foregroundFaces.length;
 
-    if (isCountdown && lockedFacesRef.current.length > 0) {
-      detectedCount = countMatchedFaces(captureCandidates, lockedFacesRef.current, frameWidth, frameHeight);
+    if (isCountdown && lockedFacesRef.current.length > 0 && foregroundFaces.length === peopleCount) {
+      detectedCount = countMatchedFaces(foregroundFaces, lockedFacesRef.current, frameWidth, frameHeight);
     } else {
       if (!areFaceSetsCompatible(candidateFacesRef.current, primaryFaces, frameWidth, frameHeight)) {
         trackerRef.current = createFaceCountState(peopleCount);
@@ -245,9 +217,20 @@ function CameraCapture({
       candidateFacesRef.current = primaryFaces;
     }
 
-    if (detectedCount === peopleCount) {
-      setCaptureError((current) => current?.code === "CAPTURE_COUNT_MISMATCH" ? null : current);
-    }
+    setCaptureError((current) => {
+      if (foregroundFaces.length > peopleCount) {
+        return current?.code === "FOREGROUND_COUNT_MISMATCH"
+          ? current
+          : {
+              code: "FOREGROUND_COUNT_MISMATCH",
+              message: "Make sure only your selected group is in the photo area.",
+              retryable: true,
+            };
+      }
+      return current?.code === "CAPTURE_COUNT_MISMATCH" || current?.code === "FOREGROUND_COUNT_MISMATCH"
+        ? null
+        : current;
+    });
     const transition = updateFaceCountState(trackerRef.current, detectedCount, timestamp);
     trackerRef.current = transition.state;
     setCountdownValue(transition.state.countdownValue);
@@ -278,11 +261,13 @@ function CameraCapture({
         startCamera(videoRef.current),
         ensureReady(),
       ].map((promise) => promise.catch((error) => ({ ok: false, error }))));
-      if (cancelled || !mountedRef.current) {
+      if (cancelled || !mountedRef.current || captureInProgressRef.current || photoPreviewUrlRef.current) {
         return;
       }
       if (!cameraResult.ok) {
-        reportError(cameraResult.error);
+        if (cameraResult.error) {
+          reportError(cameraResult.error);
+        }
         return;
       }
       if (detectorResult?.ok === false || detectorResult?.error) {
@@ -302,7 +287,7 @@ function CameraCapture({
   }, [ensureReady, reportError, setCameraPhase, startCamera, stopCamera]);
 
   useEffect(() => {
-    if (!isActive || detectorStatus !== "ready" || phase === "error" || phase === "capture_check" || uploadStatus === "checking" || uploadedPreviewUrl) {
+    if (!isActive || detectorStatus !== "ready" || phase === "error" || phase === "capture_check" || photoPreviewUrlRef.current) {
       return undefined;
     }
 
@@ -333,7 +318,7 @@ function CameraCapture({
       cancelled = true;
       window.cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [detectVideo, detectorStatus, handleDetection, isActive, phase, reportError, uploadStatus, uploadedPreviewUrl]);
+  }, [detectVideo, detectorStatus, handleDetection, isActive, phase, reportError]);
 
   async function handleRetryDetector() {
     setCaptureError(null);
@@ -348,25 +333,11 @@ function CameraCapture({
     }
   }
 
-  function handleCancel() {
-    stopCamera();
-    onCancel();
-  }
-
-  async function handleTakePhoto() {
-    captureTokenRef.current += 1;
-    captureInProgressRef.current = false;
+  async function handleRetryCamera() {
     setCaptureError(null);
-    if (uploadedPreviewUrlRef.current) {
-      URL.revokeObjectURL(uploadedPreviewUrlRef.current);
-      uploadedPreviewUrlRef.current = "";
-      setUploadedPreviewUrl("");
-    }
-    onTakePhoto();
-
-    if (!isActive) {
-      setCameraPhase("camera_loading");
-      try {
+    setCameraPhase("camera_loading");
+    try {
+      if (!isActive) {
         const cameraResult = await startCamera(videoRef.current);
         if (!mountedRef.current) {
           return;
@@ -375,19 +346,105 @@ function CameraCapture({
           reportError(cameraResult.error);
           return;
         }
-      } catch (error) {
-        reportError(error);
-        return;
       }
+      resetAlignment();
+    } catch (error) {
+      reportError(error);
     }
-
-    resetAlignment();
   }
 
+  function handleCancel() {
+    stopCamera();
+    onCancel();
+  }
+
+  async function handleBackToCamera() {
+    captureTokenRef.current += 1;
+    captureInProgressRef.current = false;
+    if (photoPreviewUrlRef.current) {
+      URL.revokeObjectURL(photoPreviewUrlRef.current);
+      photoPreviewUrlRef.current = "";
+    }
+    setCountdownValue(null);
+    setCaptureError(null);
+    onRetake();
+    setCameraPhase("camera_loading");
+
+    try {
+      const cameraResult = await startCamera(videoRef.current);
+      if (!mountedRef.current) {
+        return;
+      }
+      if (!cameraResult.ok) {
+        if (cameraResult.error) {
+          reportError(cameraResult.error);
+        }
+        return;
+      }
+      resetAlignment();
+    } catch (cameraStartError) {
+      reportError(cameraStartError);
+    }
+  }
+
+  async function handleUpload(event) {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      setCaptureError({ code: validation.code, message: validation.message, retryable: false });
+      return;
+    }
+
+    captureTokenRef.current += 1;
+    captureInProgressRef.current = true;
+    setCaptureError(null);
+    stopCamera();
+    setPhotoPreview(file);
+    setCameraPhase("capture_check");
+
+    try {
+      const detection = await detectImage(file);
+      const candidates = getCaptureCandidates(detection.faces, detection.width, detection.height);
+      const foregroundFaces = getDominantForegroundFaces(candidates, detection.width, detection.height);
+      if (foregroundFaces.length !== peopleCount) {
+        setCaptureError({
+          code: "UPLOAD_FACE_MISMATCH",
+          message: "Make sure only your selected group is in the photo area.",
+          retryable: false,
+        });
+        setCameraPhase("aligning");
+        return;
+      }
+
+      setCameraPhase("photo_ready");
+      onCaptured(file, {
+        source: "upload",
+        width: detection.width,
+        height: detection.height,
+        faceCount: foregroundFaces.length,
+      });
+    } catch (detectionError) {
+      setCaptureError({
+        code: "UPLOAD_DETECTION_FAILED",
+        message: detectionError?.message || "The uploaded photo could not be checked. Please try another photo.",
+        retryable: false,
+      });
+      setCameraPhase("aligning");
+    } finally {
+      captureInProgressRef.current = false;
+    }
+  }
+
+  const openUpload = () => {
+    uploadRef.current?.click();
+  };
+
   const cameraErrorState = captureError || cameraError || (detectorStatus === "error" ? detectorError : null) || error;
-  const visibleError = uploadStatus === "checking" ? null : cameraErrorState;
   const isDetectorError = detectorStatus === "error";
-  const isUploadLocked = uploadStatus === "checking";
+  const visibleError = isPhotoReady ? null : cameraErrorState;
+  const isUploadError = captureError?.code?.startsWith("UPLOAD_")
+    || captureError?.code?.startsWith("IMAGE_");
 
   return (
     <section className="content-card camera-card" aria-label={isPhotoReady ? "Review your photo" : "Camera capture"}>
@@ -397,10 +454,10 @@ function CameraCapture({
         </div>
       )}
 
-      <div className="camera-frame" aria-label={isPhotoReady ? "Photo preview" : uploadedPreviewUrl ? "Uploaded photo preview" : "Live camera preview"}>
+      <div className="camera-frame" aria-label={isPhotoReady ? "Photo preview" : photoPreviewUrlRef.current ? "Photo preview" : "Live camera preview"}>
         <video ref={videoRef} className="camera-video" playsInline muted autoPlay />
-        {uploadedPreviewUrl ? (
-          <img className="uploaded-photo-preview" src={uploadedPreviewUrl} alt="Uploaded group photo preview" />
+        {photoPreviewUrlRef.current ? (
+          <img className="photo-preview" src={photoPreviewUrlRef.current} alt="Captured group photo preview" />
         ) : null}
         {phase === "countdown" && countdownValue && (
           <div className="countdown-overlay" role="timer" aria-live="assertive">
@@ -412,53 +469,52 @@ function CameraCapture({
       </div>
 
       <canvas ref={canvasRef} className="visually-hidden" aria-hidden="true" />
+      <input
+        ref={uploadRef}
+        className="visually-hidden"
+        type="file"
+        accept={ACCEPTED_IMAGE_TYPES.join(",")}
+        onChange={handleUpload}
+        tabIndex={-1}
+      />
       <ErrorAlert error={visibleError} />
 
       {isPhotoReady ? (
         <div className="photo-review-actions">
-          <button className="secondary-button" type="button" onClick={handleCancel}>
+          <button className="secondary-button" type="button" onClick={handleBackToCamera}>
             <RotateCcw size={17} aria-hidden="true" /> Back
           </button>
-          <PhotoPicker
-            buttonClassName="secondary-button"
-            disabled={uploadStatus === "checking"}
-            label="Upload image"
-            onFileSelected={handleFileSelected}
-          />
-          <button className="primary-button" type="button" onClick={onProceed} disabled={uploadStatus === "checking"}>
+          <button className="primary-button" type="button" onClick={onProceed}>
             Continue <ArrowRight size={19} aria-hidden="true" />
           </button>
         </div>
       ) : visibleError ? (
         <div className="camera-fallback">
-          {isDetectorError && (
+          {!isUploadError && isDetectorError && (
             <button className="secondary-button camera-fallback-retry" type="button" onClick={handleRetryDetector}>
               <RefreshCw size={18} aria-hidden="true" /> Retry face detection
             </button>
           )}
-          <div className="camera-fallback-actions">
-            <button className="secondary-button" type="button" onClick={handleTakePhoto} disabled={isUploadLocked}>
-              <Camera size={18} aria-hidden="true" /> Take photo
+          {!isUploadError && !isDetectorError && (
+            <button className="primary-button camera-fallback-retry" type="button" onClick={handleRetryCamera}>
+              <Camera size={18} aria-hidden="true" /> Try camera again
             </button>
-            <PhotoPicker
-              onFileSelected={handleFileSelected}
-              buttonClassName="primary-button"
-              disabled={isUploadLocked}
-              label="Upload image"
-            />
-          </div>
+          )}
+          <button className="secondary-button" type="button" onClick={isUploadError ? handleBackToCamera : handleCancel}>
+            <RotateCcw size={17} aria-hidden="true" /> Back
+          </button>
+          <button className="secondary-button" type="button" onClick={openUpload}>
+            <Upload size={18} aria-hidden="true" /> Upload photo
+          </button>
         </div>
       ) : (
         <div className="camera-actions">
           <button className="secondary-button" type="button" onClick={handleCancel}>
             <RotateCcw size={17} aria-hidden="true" /> Back
           </button>
-          <PhotoPicker
-            buttonClassName="primary-button"
-            disabled={isUploadLocked}
-            label="Upload image"
-            onFileSelected={handleFileSelected}
-          />
+          <button className="primary-button" type="button" onClick={openUpload}>
+            <Upload size={18} aria-hidden="true" /> Upload photo
+          </button>
         </div>
       )}
 

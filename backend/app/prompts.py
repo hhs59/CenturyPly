@@ -59,25 +59,26 @@ SCENARIO_IDS = frozenset(SCENARIO_PROMPTS)
 ALLOWED_PEOPLE_COUNTS = frozenset({1, 2, 3, 4})
 
 
-BASE_IMAGE_GENERATION_PROMPT = """Use the uploaded group photograph as the identity reference.
+BASE_IMAGE_GENERATION_PROMPT = """Use the captured group photograph as the identity reference.
 
-The input contains exactly {people_count} distinct guests. Preserve exactly those
-same {people_count} guests and transform every guest. Preserve each guest's
+The final image must contain exactly {people_count} distinct people. Use only the
+{people_count} dominant foreground guests as the subjects and transform each selected guest. Preserve each selected guest's
 recognizable facial identity, facial proportions, skin tone, natural skin texture,
 age, hairstyle, expression, body position, relative height, and left-to-right
 arrangement. Keep the guests distinct and clearly visible.
 
-Preserve each guest's natural skin tone exactly as photographed. Do not lighten,
+Preserve each selected guest's natural skin tone exactly as photographed. Do not lighten,
 darken, recolor, homogenize, or stereotype skin tone or facial features.
 
-Do not add, remove, replace, merge, swap, or duplicate any person or face. Do not
-assign one guest's face to another guest's body. Do not add background people,
-face-like portraits, statues with visible faces, additional people, or crowds. Do not turn one person
-into multiple people. Keep every complete face and the top of every head visible.
+Do not remove, replace, merge, swap, or duplicate any selected foreground guest or face. Do not
+assign one selected guest's face to another guest's body. Replace the original background completely
+and do not reproduce incidental background people. Do not add background people, face-like portraits,
+statues with visible faces, additional people, or crowds. Do not turn one person into multiple people.
+Keep every complete face and the top of every head visible.
 
 Create one cohesive, photorealistic vertical 3:4 group photograph. Use natural
 skin detail, realistic eyes and hair, physically believable light, and a flattering
-eye-level perspective. Transform every guest with the selected clothing and place
+eye-level perspective. Transform every selected guest with the selected clothing and place
 the full group naturally inside the selected setting. Keep the composition tight
 enough for every guest to remain recognizable while leaving comfortable space
 around every head.

@@ -789,7 +789,7 @@ summary:focus-visible {
   transform: scaleX(-1);
 }
 
-.uploaded-photo-preview {
+.photo-preview {
   position: absolute;
   z-index: 1;
   inset: 0;
@@ -866,7 +866,7 @@ summary:focus-visible {
 }
 
 .photo-review-actions {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .camera-actions .primary-button,
@@ -878,23 +878,20 @@ summary:focus-visible {
 }
 
 .camera-fallback {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
   width: min(100%, 760px);
   margin: 18px auto 0;
 }
 
-.camera-fallback-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
 .camera-fallback-retry {
   width: 100%;
-  margin-bottom: 12px;
+  grid-column: 1 / -1;
 }
 
-.camera-fallback-actions .primary-button,
-.camera-fallback-actions .secondary-button {
+.camera-fallback .primary-button,
+.camera-fallback .secondary-button {
   width: 100%;
   min-width: 0;
 }
@@ -1041,10 +1038,6 @@ summary:focus-visible {
   width: 100%;
 }
 
-.result-secondary-actions {
-  margin-top: 12px;
-}
-
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -1137,25 +1130,21 @@ summary:focus-visible {
     border-radius: 19px;
   }
 
-  .camera-fallback-actions {
-    gap: 6px;
-  }
-
   .photo-review-actions,
   .camera-actions,
-  .camera-fallback-actions {
+  .camera-fallback {
     gap: 6px;
   }
 
   .photo-review-actions button,
   .camera-actions button,
-  .camera-fallback-actions button {
+  .camera-fallback button {
     padding-inline: 8px;
     font-size: 0.75rem;
   }
 
   .photo-review-actions svg,
-  .camera-fallback-actions svg {
+  .camera-fallback svg {
     display: none;
   }
 

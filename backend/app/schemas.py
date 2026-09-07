@@ -36,7 +36,7 @@ class GenerationErrorResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
-    provider: Literal["openrouter"] = "openrouter"
+    provider: Literal["gemini"] = "gemini"
     model: str
 
 

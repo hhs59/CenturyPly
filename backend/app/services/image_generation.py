@@ -46,7 +46,7 @@ class ImageGenerationService:
     def __init__(self, settings: Settings):
         self.settings = settings
 
-    # Send one portrait to OpenRouter and return its first generated image.
+    # Send one captured portrait to Gemini and return its first final generated image.
     async def generate_image(
         self,
         *,
@@ -55,7 +55,7 @@ class ImageGenerationService:
         prompt: str,
         request_id: str,
     ) -> ProviderImageResult:
-        api_key = self.settings.openrouter_api_key.strip()
+        api_key = self.settings.gemini_api_key.strip()
         if not api_key:
             raise ProviderError(
                 "PROVIDER_NOT_CONFIGURED",
@@ -64,23 +64,30 @@ class ImageGenerationService:
                 retryable=False,
             )
 
-        image_data_url = f"data:{mime_type};base64,{base64.b64encode(image_bytes).decode('ascii')}"
         payload = {
-            "model": self.settings.image_model,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {"type": "image_url", "image_url": {"url": image_data_url}},
-                    ],
-                }
-            ],
-            "modalities": ["image", "text"],
-            "image_config": {"aspect_ratio": "3:4"},
-            "max_tokens": 4096,
+            "contents": [{
+                "role": "user",
+                "parts": [
+                    {"text": prompt},
+                    {
+                        "inline_data": {
+                            "mime_type": mime_type,
+                            "data": base64.b64encode(image_bytes).decode("ascii"),
+                        },
+                    },
+                ],
+            }],
+            "generationConfig": {
+                "responseModalities": ["IMAGE"],
+                "responseFormat": {
+                    "image": {
+                        # The REST API expects the protobuf enum name here.
+                        "aspectRatio": "ASPECT_RATIO_THREE_BY_FOUR",
+                    },
+                },
+            },
         }
-        endpoint = f"{self.settings.openrouter_base_url.rstrip('/')}/chat/completions"
+        endpoint = f"{self.settings.gemini_base_url.rstrip('/')}/models/{self.settings.image_model}:generateContent"
         started = time.perf_counter()
 
         try:
@@ -88,7 +95,7 @@ class ImageGenerationService:
                 response = await client.post(
                     endpoint,
                     headers={
-                        "Authorization": f"Bearer {api_key}",
+                        "x-goog-api-key": api_key,
                         "Content-Type": "application/json",
                         "X-Request-ID": request_id,
                     },
@@ -145,20 +152,20 @@ def _http_error(http_status: int, latency_ms: int) -> ProviderError:
             http_status=http_status,
             latency_ms=latency_ms,
         )
-    if http_status == 402:
-        return ProviderError(
-            "PROVIDER_BILLING_ERROR",
-            "The image service is temporarily unavailable.",
-            status_code=503,
-            retryable=False,
-            http_status=http_status,
-            latency_ms=latency_ms,
-        )
     if http_status == 429:
         return ProviderError(
             "PROVIDER_RATE_LIMIT",
             "The image service is busy. Try again shortly.",
             status_code=429,
+            http_status=http_status,
+            latency_ms=latency_ms,
+        )
+    if 400 <= http_status < 500:
+        return ProviderError(
+            "PROVIDER_REQUEST_INVALID",
+            "The image service rejected the request.",
+            status_code=502,
+            retryable=False,
             http_status=http_status,
             latency_ms=latency_ms,
         )
@@ -170,35 +177,41 @@ def _http_error(http_status: int, latency_ms: int) -> ProviderError:
     )
 
 
-# OpenRouter returns the image as a Base64 data URL in the assistant message.
 def decode_provider_image(response_body: Any) -> tuple[bytes, str]:
-    try:
-        data_url = response_body["choices"][0]["message"]["images"][0]["image_url"]["url"]
-    except (KeyError, IndexError, TypeError) as exc:
-        raise ProviderError("PROVIDER_NO_IMAGE", "No image was returned. Please try again.") from exc
-
-    if not isinstance(data_url, str) or not data_url:
+    """Extract the first non-thought inline image from Gemini's response."""
+    candidates = response_body.get("candidates") if isinstance(response_body, dict) else None
+    if not isinstance(candidates, list):
         raise ProviderError("PROVIDER_NO_IMAGE", "No image was returned. Please try again.")
 
-    if not data_url.startswith("data:"):
-        raise ProviderError("PROVIDER_INVALID_IMAGE", "The returned image could not be processed.")
+    for candidate in candidates:
+        content = candidate.get("content") if isinstance(candidate, dict) else None
+        parts = content.get("parts") if isinstance(content, dict) else None
+        if not isinstance(parts, list):
+            continue
+        for part in parts:
+            if not isinstance(part, dict) or part.get("thought") is True:
+                continue
+            inline_data = part.get("inlineData") or part.get("inline_data")
+            if not isinstance(inline_data, dict):
+                continue
+            encoded = inline_data.get("data")
+            declared_mime_type = inline_data.get("mimeType") or inline_data.get("mime_type")
+            if not isinstance(encoded, str) or not encoded:
+                continue
 
-    header, separator, encoded = data_url.partition(",")
-    if not separator or ";base64" not in header:
-        raise ProviderError("PROVIDER_INVALID_IMAGE", "The returned image could not be processed.")
-    declared_mime_type = header[5:].split(";", 1)[0]
+            try:
+                image_bytes = base64.b64decode(encoded, validate=True)
+            except (ValueError, binascii.Error) as exc:
+                raise ProviderError("PROVIDER_INVALID_IMAGE", "The returned image could not be processed.") from exc
 
-    try:
-        image_bytes = base64.b64decode(encoded, validate=True)
-    except (ValueError, binascii.Error) as exc:
-        raise ProviderError("PROVIDER_INVALID_IMAGE", "The returned image could not be processed.") from exc
+            detected_mime_type = detect_raster_mime(image_bytes)
+            if detected_mime_type is None:
+                raise ProviderError("PROVIDER_INVALID_IMAGE", "The returned image could not be processed.")
+            if declared_mime_type and declared_mime_type.lower() != detected_mime_type:
+                raise ProviderError("PROVIDER_INVALID_IMAGE", "The returned image could not be processed.")
+            return image_bytes, detected_mime_type
 
-    detected_mime_type = detect_raster_mime(image_bytes)
-    if detected_mime_type is None:
-        raise ProviderError("PROVIDER_INVALID_IMAGE", "The returned image could not be processed.")
-    if declared_mime_type and declared_mime_type != detected_mime_type:
-        raise ProviderError("PROVIDER_INVALID_IMAGE", "The returned image could not be processed.")
-    return image_bytes, detected_mime_type
+    raise ProviderError("PROVIDER_NO_IMAGE", "No image was returned. Please try again.")
 
 
 # Basic signatures are enough here; the image provider performs the real decode.
