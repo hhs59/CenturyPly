@@ -18,7 +18,6 @@ import {
   RefreshCw,
   Search,
   Server,
-  Share2,
   Terminal,
   Users,
   X,
@@ -350,7 +349,6 @@ function SessionTable({ sessions, loading, onPhoto, onLogs }) {
             <th>Images</th>
             <th>Render</th>
             <th>Downloads</th>
-            <th>Shares</th>
             <th>Created</th>
             <th aria-label="Actions" />
           </tr>
@@ -358,10 +356,10 @@ function SessionTable({ sessions, loading, onPhoto, onLogs }) {
         <tbody>
           {loading ? Array.from({ length: 5 }, (_, index) => (
             <tr key={`skeleton-${index}`} className="dashboard-skeleton-row">
-              {Array.from({ length: 9 }, (_, cell) => <td key={cell}><span /></td>)}
+              {Array.from({ length: 8 }, (_, cell) => <td key={cell}><span /></td>)}
             </tr>
           )) : sessions.length === 0 ? (
-            <tr><td colSpan="9"><EmptyState message="No generation sessions match these filters." /></td></tr>
+            <tr><td colSpan="8"><EmptyState message="No generation sessions match these filters." /></td></tr>
           ) : sessions.map((session) => (
             <tr key={session.id}>
               <td>
@@ -377,7 +375,6 @@ function SessionTable({ sessions, loading, onPhoto, onLogs }) {
               </td>
               <td className="dashboard-metric dashboard-metric-warm">{session.render_duration ? `${session.render_duration}s` : "—"}</td>
               <td className="dashboard-metric dashboard-metric-cyan">{session.download_count || 0}</td>
-              <td className="dashboard-metric dashboard-metric-purple">{session.share_count || 0}</td>
               <td className="dashboard-date">{formatDate(session.created_at)}</td>
               <td className="dashboard-table-action"><button type="button" className="dashboard-log-button" onClick={() => onLogs(session)}><Terminal size={14} /> Log</button></td>
             </tr>
@@ -529,7 +526,7 @@ export default function Dashboard() {
   const scenarioEntries = useMemo(() => SCENARIOS.map((scenario, index) => ({
     id: scenario.id,
     name: scenario.name,
-    value: Number(overview?.scenario_counts?.[scenario.id] || overview?.style_counts?.[scenario.id] || 0),
+    value: Number(overview?.scenario_counts?.[scenario.id] || 0),
     color: SCENARIO_COLORS[index % SCENARIO_COLORS.length],
   })).filter((entry) => entry.value > 0), [overview]);
 
@@ -579,7 +576,7 @@ export default function Dashboard() {
         setNotice("There is no session data to export yet.");
         return;
       }
-      const headers = ["Session ID", "Story", "Guest count", "Status", "Render seconds", "Downloads", "Shares", "Created", "Original image", "Generated image"];
+      const headers = ["Session ID", "Story", "Guest count", "Status", "Render seconds", "Downloads", "Created", "Original image", "Generated image"];
       const csvCell = (value) => `"${String(value ?? "").replaceAll("\"", "\"\"")}"`;
       const csv = `\uFEFF${[headers, ...rows.map((row) => [
         row.id,
@@ -588,7 +585,6 @@ export default function Dashboard() {
         statusLabel(row.status),
         row.render_duration,
         row.download_count,
-        row.share_count,
         row.created_at ? new Date(row.created_at).toLocaleString() : "",
         row.input_image_url,
         row.output_image_url,
@@ -634,7 +630,6 @@ export default function Dashboard() {
           <StatCard label="Success rate" value={`${overviewValue("success_rate")}%`} description={`${overview?.failed_jobs || 0} failed sessions`} tone="blue" icon={BarChart3} />
           <StatCard label="Average render" value={`${overviewValue("avg_render_time")}s`} description="End-to-end service time" tone="amber" icon={Clock3} />
           <StatCard label="Downloads" value={overviewValue("total_downloads")} description="Customer downloads" tone="cyan" icon={Download} />
-          <StatCard label="Shares" value={overviewValue("total_shares")} description="Customer share actions" tone="purple" icon={Share2} />
         </section>
 
         <section className="dashboard-tab-row" aria-label="Dashboard sections">

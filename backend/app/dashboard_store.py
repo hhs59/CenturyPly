@@ -64,8 +64,6 @@ class DashboardStore:
                     error_code TEXT,
                     error_message TEXT,
                     logs_json TEXT NOT NULL DEFAULT '[]',
-                    download_count INTEGER NOT NULL DEFAULT 0,
-                    share_count INTEGER NOT NULL DEFAULT 0,
                     input_path TEXT,
                     output_path TEXT
                 )
@@ -231,17 +229,6 @@ class DashboardStore:
                 )
         return True
 
-    def record_action(self, session_id: str, action: str) -> bool:
-        column = {"download": "download_count", "share": "share_count"}.get(action)
-        if column is None:
-            return False
-        with self._lock, self._connection:
-            cursor = self._connection.execute(
-                f"UPDATE sessions SET {column} = {column} + 1 WHERE id = ?",  # noqa: S608 - column is allow-listed.
-                (session_id,),
-            )
-        return cursor.rowcount > 0
-
     def list_sessions(
         self,
         *,
@@ -374,8 +361,6 @@ class DashboardStore:
         completed_jobs = success_jobs + failed_jobs
         durations = [int(row["render_duration_ms"] or 0) for row in rows if int(row["render_duration_ms"] or 0) > 0]
         scenario_counts: dict[str, int] = {}
-        total_downloads = 0
-        total_shares = 0
         hourly_activity = [0] * 24
         now = datetime.now(timezone.utc)
         daily_keys: list[str] = []
@@ -389,8 +374,6 @@ class DashboardStore:
         for row in rows:
             scenario_id = row["scenario_id"] or "unknown"
             scenario_counts[scenario_id] = scenario_counts.get(scenario_id, 0) + 1
-            total_downloads += int(row["download_count"] or 0)
-            total_shares += int(row["share_count"] or 0)
             timestamp = _parse_timestamp(row["created_at"])
             if timestamp is None:
                 continue
@@ -413,13 +396,9 @@ class DashboardStore:
             "error_rate": error_rate,
             "avg_render_time": avg_render_time,
             "scenario_counts": scenario_counts,
-            "style_counts": scenario_counts,
             "trend_labels": daily_keys,
             "trend_values": [daily_values[key] for key in daily_keys],
             "hourly_activity": hourly_activity,
-            "top_users": [],
-            "total_downloads": total_downloads,
-            "total_shares": total_shares,
         }
 
     def _serialize_session(self, row: sqlite3.Row) -> dict[str, Any]:
@@ -428,17 +407,13 @@ class DashboardStore:
         output_url = f"/api/dashboard/sessions/{session_id}/image/output" if row["output_path"] else ""
         return {
             "id": session_id,
-            "job_id": session_id,
             "name": "Guest group",
             "description": f"{row['people_count']} guest(s) · {row['scenario_id']}",
             "scenario_id": row["scenario_id"],
-            "style_id": row["scenario_id"],
             "people_count": row["people_count"],
             "status": row["status"],
             "input_image_url": input_url,
             "output_image_url": output_url,
-            "raw_image_url": input_url,
-            "final_image_url": output_url,
             "created_at": row["created_at"],
             "completed_at": row["completed_at"],
             "render_duration_ms": int(row["render_duration_ms"] or 0),
@@ -449,8 +424,6 @@ class DashboardStore:
             "output_byte_count": int(row["output_byte_count"] or 0),
             "error_code": row["error_code"] or "",
             "error_message": row["error_message"] or "",
-            "download_count": int(row["download_count"] or 0),
-            "share_count": int(row["share_count"] or 0),
             "logs": _parse_logs(row["logs_json"]),
         }
 

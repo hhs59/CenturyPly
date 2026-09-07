@@ -20,7 +20,6 @@ from .photo_api import PhotoService, create_photo_router
 from .logging_utils import RequestLogger
 from .prompts import ALLOWED_PEOPLE_COUNTS, SCENARIO_IDS, build_image_generation_prompt
 from .schemas import (
-    DashboardActionRequest,
     DashboardLogsRequest,
     GenerationError,
     GenerationErrorResponse,
@@ -160,15 +159,6 @@ def dashboard_session_image(session_id: str, variant: str) -> FileResponse:
         media_type=mime_type,
         headers={"Cache-Control": "private, max-age=300"},
     )
-
-
-@app.post("/api/dashboard/sessions/{session_id}/action")
-def dashboard_session_action(session_id: str, payload: DashboardActionRequest) -> dict[str, Any]:
-    if payload.action == "download":
-        raise HTTPException(status_code=400, detail="Downloads are recorded by the phone download endpoint.")
-    if not dashboard_store.record_action(session_id, payload.action):
-        raise HTTPException(status_code=404, detail="Dashboard session not found.")
-    return {"ok": True, "session_id": session_id, "action": payload.action}
 
 
 @app.post("/api/dashboard/sessions/{session_id}/logs")

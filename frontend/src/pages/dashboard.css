@@ -297,9 +297,6 @@
 .dashboard-stat-cyan { border-top-color: rgba(102, 202, 218, 0.4); }
 .dashboard-stat-cyan strong, .dashboard-stat-cyan .dashboard-stat-icon { color: #66cadb; }
 .dashboard-stat-cyan .dashboard-stat-icon { background: rgba(102, 202, 218, 0.12); }
-.dashboard-stat-purple { border-top-color: rgba(175, 147, 230, 0.4); }
-.dashboard-stat-purple strong, .dashboard-stat-purple .dashboard-stat-icon { color: #af93e6; }
-.dashboard-stat-purple .dashboard-stat-icon { background: rgba(175, 147, 230, 0.12); }
 
 .dashboard-tab-row {
   gap: 5px;
@@ -836,7 +833,6 @@
 
 .dashboard-metric-warm { color: #e5b96f !important; }
 .dashboard-metric-cyan { color: #66cadb !important; }
-.dashboard-metric-purple { color: #af93e6 !important; }
 .dashboard-date { color: #818a96 !important; white-space: nowrap; }
 
 .dashboard-log-button {

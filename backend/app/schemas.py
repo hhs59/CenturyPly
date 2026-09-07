@@ -41,9 +41,5 @@ class HealthResponse(BaseModel):
     model: str
 
 
-class DashboardActionRequest(BaseModel):
-    action: Literal["download", "share"]
-
-
 class DashboardLogsRequest(BaseModel):
     logs: list[dict[str, Any]]
