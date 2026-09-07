@@ -1,0 +1,14 @@
+.git/
+.env
+.env.*
+.venv/
+.DS_Store
+
+**/__pycache__/
+**/.pytest_cache/
+*.py[cod]
+
+frontend/node_modules/
+frontend/dist/
+
+superhero_generator_phase_plans/
