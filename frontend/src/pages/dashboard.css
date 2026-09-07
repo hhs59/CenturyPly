@@ -376,6 +376,7 @@
   width: 100%;
   height: 250px;
   overflow: visible;
+  cursor: crosshair;
 }
 
 .dashboard-chart-gridline {
@@ -397,6 +398,12 @@
   fill: #111318;
   stroke: var(--dashboard-gold);
   stroke-width: 2;
+  cursor: crosshair;
+  transition: filter 140ms ease;
+}
+
+.dashboard-trend-point-active {
+  filter: drop-shadow(0 0 7px rgba(220, 169, 107, 0.75));
 }
 
 .dashboard-chart-empty {
@@ -410,6 +417,41 @@
   pointer-events: none;
 }
 
+.dashboard-chart-tooltip {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 230px;
+  padding: 7px 9px;
+  overflow: hidden;
+  border: 1px solid rgba(220, 169, 107, 0.35);
+  border-radius: 8px;
+  background: rgba(12, 14, 18, 0.96);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32);
+  color: #f4f0e8;
+  font-size: 0.64rem;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 12px));
+  white-space: nowrap;
+}
+
+.dashboard-chart-tooltip strong {
+  overflow: hidden;
+  color: var(--dashboard-gold);
+  font-weight: 800;
+  text-overflow: ellipsis;
+}
+
+.dashboard-chart-tooltip span {
+  color: #c4cad1;
+}
+
+.dashboard-chart-tooltip-below {
+  transform: translate(-50%, 12px);
+}
+
 .dashboard-chart-labels {
   display: flex;
   justify-content: space-between;
@@ -419,6 +461,7 @@
 }
 
 .dashboard-donut-wrap {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr);
   align-items: center;
@@ -434,7 +477,20 @@
   margin: auto;
   place-items: center;
   border-radius: 50%;
+  cursor: crosshair;
   transform: rotate(-18deg);
+  transition: filter 140ms ease;
+}
+
+.dashboard-donut:hover,
+.dashboard-donut-active {
+  filter: brightness(1.16);
+}
+
+.dashboard-donut-tooltip {
+  top: 16px;
+  left: 25%;
+  transform: translateX(-50%);
 }
 
 .dashboard-donut-hole {
@@ -479,6 +535,11 @@
   min-width: 0;
   color: #a5abb4;
   font-size: 0.67rem;
+  transition: color 140ms ease;
+}
+
+.dashboard-legend-row-active {
+  color: #f1d49f;
 }
 
 .dashboard-legend-row span:nth-child(2) {
@@ -507,6 +568,7 @@
 }
 
 .dashboard-hourly-chart {
+  position: relative;
   height: 260px;
   padding: 24px 20px 15px;
 }
@@ -542,6 +604,18 @@
   border-radius: 4px 4px 0 0;
   background: linear-gradient(180deg, #e07961, #a94540);
   box-shadow: 0 0 12px rgba(224, 121, 97, 0.15);
+  cursor: crosshair;
+  transition: filter 140ms ease, box-shadow 140ms ease;
+}
+
+.dashboard-hourly-bar:hover,
+.dashboard-hourly-bar-active {
+  filter: brightness(1.22);
+  box-shadow: 0 0 16px rgba(224, 121, 97, 0.42);
+}
+
+.dashboard-hourly-tooltip {
+  bottom: 58px;
 }
 
 .dashboard-hourly-label {

@@ -78,6 +78,19 @@ function statusClass(status) {
   return `dashboard-status dashboard-status-${status || "unknown"}`;
 }
 
+function attemptLabel(value) {
+  return `${value} attempt${value === 1 ? "" : "s"}`;
+}
+
+function DashboardChartTooltip({ label, value, className = "", style }) {
+  return (
+    <div className={`dashboard-chart-tooltip ${className}`.trim()} style={style} aria-hidden="true">
+      <strong>{label}</strong>
+      <span>{value}</span>
+    </div>
+  );
+}
+
 function StatCard({ label, value, description, tone, icon: Icon }) {
   return (
     <article className={`dashboard-stat-card dashboard-stat-${tone}`}>
@@ -121,17 +134,36 @@ function TrendChart({ labels = [], values = [] }) {
   const visibleLabels = labels.map((label, index) => ({ label, index })).filter(({ index }) => (
     labels.length <= 7 || index === 0 || index === labels.length - 1 || index % 2 === 0
   ));
+  const [hoveredIndex, setHoveredIndex] = useState(null);
+  const activePoint = hoveredIndex === null ? null : points[hoveredIndex];
+
+  function handleMouseMove(event) {
+    if (!points.length) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = Math.max(0, Math.min(width, ((event.clientX - rect.left) / rect.width) * width));
+    const nearestIndex = points.reduce((bestIndex, point, index) => (
+      Math.abs(point.x - x) < Math.abs(points[bestIndex].x - x) ? index : bestIndex
+    ), 0);
+    setHoveredIndex(nearestIndex);
+  }
 
   return (
     <div className="dashboard-trend-chart">
       {!hasData && <div className="dashboard-chart-empty">Generation activity will appear here.</div>}
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Generation activity for the last 14 days">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label="Generation activity for the last 14 days"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoveredIndex(null)}
+      >
         <defs>
           <linearGradient id="dashboardTrendFill" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="#dca96b" stopOpacity="0.28" />
             <stop offset="100%" stopColor="#dca96b" stopOpacity="0" />
           </linearGradient>
         </defs>
+        <rect x="0" y="0" width={width} height={height} fill="transparent" pointerEvents="all" />
         {[0, 0.5, 1].map((ratio) => {
           const y = padding.top + innerHeight * ratio;
           return <line key={ratio} x1={padding.left} x2={padding.left + innerWidth} y1={y} y2={y} className="dashboard-chart-gridline" />;
@@ -139,11 +171,28 @@ function TrendChart({ labels = [], values = [] }) {
         {area && <polygon points={area} fill="url(#dashboardTrendFill)" />}
         {polyline && <polyline points={polyline} className="dashboard-trend-line" />}
         {points.map((point, index) => (
-          <circle key={`${point.x}-${index}`} cx={point.x} cy={point.y} r="4" className="dashboard-trend-point">
+          <circle
+            key={`${point.x}-${index}`}
+            cx={point.x}
+            cy={point.y}
+            r={hoveredIndex === index ? 6 : 4}
+            className={`dashboard-trend-point${hoveredIndex === index ? " dashboard-trend-point-active" : ""}`}
+          >
             <title>{`${labels[index] || "Day"}: ${point.value}`}</title>
           </circle>
         ))}
       </svg>
+      {activePoint && (
+        <DashboardChartTooltip
+          className={activePoint.y < 70 ? "dashboard-chart-tooltip-below" : "dashboard-trend-tooltip"}
+          label={labels[hoveredIndex] || "Day"}
+          value={attemptLabel(activePoint.value)}
+          style={{
+            left: `${Math.min(88, Math.max(12, (activePoint.x / width) * 100))}%`,
+            top: `${(activePoint.y / height) * 100}%`,
+          }}
+        />
+      )}
       <div className="dashboard-chart-labels" aria-hidden="true">
         {visibleLabels.map(({ label, index }) => <span key={`${label}-${index}`}>{label}</span>)}
       </div>
@@ -160,26 +209,62 @@ function ScenarioDonut({ entries }) {
     const end = total ? (cursor / total) * 100 : 100;
     return `${entry.color} ${start}% ${end}%`;
   });
+  const [hoveredIndex, setHoveredIndex] = useState(null);
+  const activeEntry = hoveredIndex === null ? null : entries[hoveredIndex];
+
+  function handleMouseMove(event) {
+    if (!total) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - rect.left - (rect.width / 2);
+    const y = event.clientY - rect.top - (rect.height / 2);
+    if (Math.hypot(x, y) < rect.width * 0.34) {
+      setHoveredIndex(null);
+      return;
+    }
+
+    const degrees = (Math.atan2(y, x) * (180 / Math.PI) + 108 + 360) % 360;
+    const target = (degrees / 360) * total;
+    let cursorValue = 0;
+    const index = entries.findIndex((entry) => {
+      cursorValue += entry.value;
+      return target < cursorValue;
+    });
+    setHoveredIndex(index >= 0 ? index : null);
+  }
 
   return (
     <div className="dashboard-donut-wrap">
       {total > 0 ? (
         <div
-          className="dashboard-donut"
+          className={`dashboard-donut${activeEntry ? " dashboard-donut-active" : ""}`}
           style={{ background: `conic-gradient(${gradientStops.join(", ")})` }}
           role="img"
           aria-label="Scenario selection mix"
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => setHoveredIndex(null)}
         >
           <div className="dashboard-donut-hole"><strong>{total}</strong><span>attempts</span></div>
         </div>
       ) : (
         <div className="dashboard-donut dashboard-donut-empty"><div className="dashboard-donut-hole"><strong>0</strong><span>attempts</span></div></div>
       )}
+      {activeEntry && (
+        <DashboardChartTooltip
+          className="dashboard-donut-tooltip"
+          label={activeEntry.name}
+          value={attemptLabel(activeEntry.value)}
+        />
+      )}
       <div className="dashboard-legend">
         {entries.length === 0 ? (
           <span className="dashboard-muted">No scenario data yet.</span>
-        ) : entries.map((entry) => (
-          <div className="dashboard-legend-row" key={entry.id}>
+        ) : entries.map((entry, index) => (
+          <div
+            className={`dashboard-legend-row${hoveredIndex === index ? " dashboard-legend-row-active" : ""}`}
+            key={entry.id}
+            onMouseEnter={() => setHoveredIndex(index)}
+            onMouseLeave={() => setHoveredIndex(null)}
+          >
             <span className="dashboard-legend-dot" style={{ backgroundColor: entry.color }} />
             <span title={entry.name}>{entry.name}</span>
             <strong>{entry.value}</strong>
@@ -193,21 +278,38 @@ function ScenarioDonut({ entries }) {
 function HourlyChart({ values = [] }) {
   const safeValues = Array.from({ length: 24 }, (_, index) => Number(values[index]) || 0);
   const maxValue = Math.max(1, ...safeValues);
+  const [hoveredIndex, setHoveredIndex] = useState(null);
   return (
     <div className="dashboard-hourly-chart" role="img" aria-label="Generation activity by hour">
       <div className="dashboard-hourly-bars">
         {safeValues.map((value, index) => (
-          <div className="dashboard-hourly-column" key={index}>
+          <div
+            className="dashboard-hourly-column"
+            key={index}
+            onMouseEnter={() => setHoveredIndex(index)}
+            onMouseLeave={() => setHoveredIndex(null)}
+          >
             <span className="dashboard-hourly-value">{value || ""}</span>
             <span
-              className="dashboard-hourly-bar"
+              className={`dashboard-hourly-bar${hoveredIndex === index ? " dashboard-hourly-bar-active" : ""}`}
               style={{ height: `${Math.max(value ? 6 : 2, (value / maxValue) * 100)}%` }}
-              title={`${index}:00 — ${value} attempt${value === 1 ? "" : "s"}`}
+              aria-label={`${index}:00 — ${attemptLabel(value)}`}
+              tabIndex={0}
+              onFocus={() => setHoveredIndex(index)}
+              onBlur={() => setHoveredIndex(null)}
             />
             <span className="dashboard-hourly-label">{index % 3 === 0 ? `${String(index).padStart(2, "0")}h` : ""}</span>
           </div>
         ))}
       </div>
+      {hoveredIndex !== null && (
+        <DashboardChartTooltip
+          className="dashboard-hourly-tooltip"
+          label={`${hoveredIndex}:00`}
+          value={attemptLabel(safeValues[hoveredIndex])}
+          style={{ left: `${((hoveredIndex + 0.5) / safeValues.length) * 100}%` }}
+        />
+      )}
     </div>
   );
 }
