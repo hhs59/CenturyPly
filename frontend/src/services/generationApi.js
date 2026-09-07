@@ -11,24 +11,14 @@ const NON_RETRYABLE_CODES = new Set([
 ]);
 
 export class GenerationApiError extends Error {
-  constructor({ code, message, status = 0, logs = [], kind = "application", retryable = true }) {
+  constructor({ code, message, status = 0, kind = "application", retryable = true }) {
     super(message);
     this.name = "GenerationApiError";
     this.code = code;
     this.status = status;
-    this.logs = Array.isArray(logs) ? logs : [];
     this.kind = kind;
     this.retryable = Boolean(retryable);
   }
-}
-
-function normalizeLogs(logs) {
-  if (!Array.isArray(logs)) {
-    return [];
-  }
-  return logs.filter((entry) => (
-    entry && typeof entry === "object" && typeof entry.event === "string" && typeof entry.message === "string"
-  ));
 }
 
 async function readResponse(response) {
@@ -90,7 +80,6 @@ export async function generateImage({ peopleCount, scenarioId, file, signal }) {
   }
 
   const payload = await readResponse(response);
-  const logs = normalizeLogs(payload?.logs);
   if (response.ok && payload?.success === true) {
     if (
       typeof payload.request_id !== "string"
@@ -102,10 +91,9 @@ export async function generateImage({ peopleCount, scenarioId, file, signal }) {
         code: "API_INVALID_RESPONSE",
         message: "The image service returned an invalid image. Please try again.",
         status: response.status,
-        logs,
       });
     }
-    return { requestId: payload.request_id, resultImage: payload.result_image, logs };
+    return { requestId: payload.request_id, resultImage: payload.result_image };
   }
 
   const errorCode = typeof payload?.error?.code === "string" ? payload.error.code : "GENERATION_FAILED";
@@ -116,7 +104,6 @@ export async function generateImage({ peopleCount, scenarioId, file, signal }) {
     code: errorCode,
     message: errorMessage,
     status: response.status,
-    logs,
     retryable: typeof payload?.error?.retryable === "boolean"
       ? payload.error.retryable
       : !NON_RETRYABLE_CODES.has(errorCode),

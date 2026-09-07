@@ -8,13 +8,13 @@ function ScenarioStep({ scenarioId, error, onScenarioChange, onContinue }) {
   return (
     <section className="content-card setup-card scenario-step" aria-labelledby="scenario-heading">
       <div className="card-heading">
-        <h2 id="scenario-heading" tabIndex={-1}>Choose a Vietnamese story</h2>
+        <h2 id="scenario-heading" tabIndex={-1}>Choose your story</h2>
       </div>
 
       <fieldset className="setup-fieldset scenario-fieldset">
         <legend className="visually-hidden">Choose a scenario</legend>
         <div className="scenario-grid" role="radiogroup" aria-label="Vietnamese scenarios">
-          {SCENARIOS.map((scenario) => {
+          {SCENARIOS.map((scenario, index) => {
             const selected = scenario.id === scenarioId;
             return (
               <button
@@ -30,8 +30,8 @@ function ScenarioStep({ scenarioId, error, onScenarioChange, onContinue }) {
                   <img src={scenario.previewImage} alt="" />
                 </span>
                 <span className="scenario-copy">
+                  <small>Concept 0{index + 1}</small>
                   <strong>{scenario.name}</strong>
-                  <span>{scenario.shortDescription}</span>
                 </span>
                 {selected && (
                   <span className="scenario-check" aria-hidden="true"><Check size={15} /></span>

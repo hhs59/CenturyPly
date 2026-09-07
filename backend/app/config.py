@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     image_timeout_seconds: float = 120.0
     max_upload_bytes: int = 10_485_760
     frontend_origin: str = "http://localhost:5173"
+    dashboard_data_dir: Path = PROJECT_ROOT / "backend" / "data"
+    dashboard_timezone: str = "Asia/Ho_Chi_Minh"
 
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",

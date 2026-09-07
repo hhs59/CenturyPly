@@ -38,3 +38,11 @@ class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
     provider: Literal["openrouter"] = "openrouter"
     model: str
+
+
+class DashboardActionRequest(BaseModel):
+    action: Literal["download", "share"]
+
+
+class DashboardLogsRequest(BaseModel):
+    logs: list[dict[str, Any]]

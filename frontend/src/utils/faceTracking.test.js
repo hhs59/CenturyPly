@@ -1,9 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  areFaceSetsCompatible,
+  countMatchedFaces,
   createFaceCountState,
+  getCaptureCandidates,
+  selectPrimaryFaces,
   updateFaceCountState,
 } from "./faceTracking.js";
+
+const FRAME_WIDTH = 1_000;
+const FRAME_HEIGHT = 1_000;
+
+function face(x, y, width, height = width) {
+  return { x, y, width, height };
+}
 
 test("exact face count needs one full second before countdown", () => {
   let state = createFaceCountState(2);
@@ -67,4 +78,41 @@ test("countdown requests one capture at zero", () => {
   assert.equal(transition.event, "capture_requested");
   assert.equal(transition.state.phase, "capture_check");
   assert.equal(transition.state.countdownValue, 0);
+});
+
+test("primary faces ignore an extra background face", () => {
+  const detections = [
+    face(180, 250, 150),
+    face(425, 240, 160),
+    face(680, 250, 145),
+    face(500, 520, 45),
+    face(-100, 250, 150),
+  ];
+  const candidates = getCaptureCandidates(detections, FRAME_WIDTH, FRAME_HEIGHT);
+  const primaryFaces = selectPrimaryFaces(candidates, 3, FRAME_WIDTH, FRAME_HEIGHT);
+
+  assert.equal(candidates.length, 4);
+  assert.equal(primaryFaces.length, 3);
+  assert.ok(primaryFaces.every((candidate) => candidate.width >= 145));
+});
+
+test("locked faces allow slight movement and ignore new faces", () => {
+  const lockedFaces = [
+    face(180, 250, 150),
+    face(425, 240, 160),
+    face(680, 250, 145),
+  ];
+  const currentFaces = [
+    face(190, 258, 148),
+    face(432, 246, 157),
+    face(672, 260, 147),
+    face(500, 520, 45),
+  ];
+
+  assert.equal(areFaceSetsCompatible(lockedFaces, currentFaces.slice(0, 3), FRAME_WIDTH, FRAME_HEIGHT), true);
+  assert.equal(countMatchedFaces(currentFaces, lockedFaces, FRAME_WIDTH, FRAME_HEIGHT), 3);
+  assert.equal(
+    countMatchedFaces([currentFaces[0], currentFaces[1], face(800, 700, 145)], lockedFaces, FRAME_WIDTH, FRAME_HEIGHT),
+    2,
+  );
 });

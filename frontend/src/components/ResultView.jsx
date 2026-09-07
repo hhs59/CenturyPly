@@ -4,7 +4,8 @@ function ResultView({ scenarioName, displayUrl, resultBlob, onDownload, onShare,
   return (
     <section className="content-card result-card" aria-labelledby="result-heading">
       <div className="card-heading">
-        <h2 id="result-heading" tabIndex={-1}>{scenarioName || "Vietnamese heritage portrait"}</h2>
+        <h2 id="result-heading" tabIndex={-1}>Your portrait is ready</h2>
+        {scenarioName && <p className="result-story-name">{scenarioName}</p>}
       </div>
 
       {displayUrl && (

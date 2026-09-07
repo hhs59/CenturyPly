@@ -18,7 +18,7 @@ function PeopleCountStep({
   return (
     <section className="content-card setup-card people-step" aria-labelledby="people-heading">
       <div className="card-heading">
-        <h2 id="people-heading" tabIndex={-1}>How many guests are joining?</h2>
+        <h2 id="people-heading" tabIndex={-1}>How many people?</h2>
       </div>
 
       {scenario && (
@@ -27,7 +27,6 @@ function PeopleCountStep({
             <img src={scenario.previewImage} alt="" />
           </span>
           <span>
-            <small>Your selected scene</small>
             <strong>{scenario.name}</strong>
           </span>
         </div>
@@ -48,7 +47,7 @@ function PeopleCountStep({
                 type="button"
               >
                 <strong>{count}</strong>
-                <span>{count === 1 ? "guest" : "guests"}</span>
+                <span>{count === 1 ? "person" : "people"}</span>
               </button>
             );
           })}
@@ -59,10 +58,10 @@ function PeopleCountStep({
 
       <div className="setup-actions people-step-actions">
         <button className="secondary-button" onClick={onBack} type="button">
-          <ArrowLeft size={19} aria-hidden="true" /> Back to scene
+          <ArrowLeft size={19} aria-hidden="true" /> Back
         </button>
         <button className="primary-button" disabled={!canContinue} onClick={onContinue} type="button">
-          Continue to camera
+          Continue
           <ArrowRight size={19} aria-hidden="true" />
         </button>
       </div>

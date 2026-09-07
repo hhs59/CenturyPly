@@ -5,8 +5,13 @@ import PhotoPicker from "./PhotoPicker.jsx";
 import { useCamera } from "../hooks/useCamera.js";
 import { validateImageFile } from "../utils/imageValidation.js";
 import {
+  areFaceSetsCompatible,
+  countMatchedFaces,
   createFaceCountState,
   DETECTION_INTERVAL_MS,
+  getCaptureCandidates,
+  mirrorFaceBoxes,
+  selectPrimaryFaces,
   updateFaceCountState,
 } from "../utils/faceTracking.js";
 
@@ -24,8 +29,6 @@ function CameraCapture({
   onCancel,
   onCaptured,
   onFileSelected,
-  onLog,
-  onCameraError,
   onPhaseChange,
   onProceed,
   uploadStatus,
@@ -36,6 +39,8 @@ function CameraCapture({
   const lastDetectionAtRef = useRef(-Infinity);
   const phaseRef = useRef("camera_loading");
   const trackerRef = useRef(createFaceCountState(peopleCount));
+  const candidateFacesRef = useRef([]);
+  const lockedFacesRef = useRef([]);
   const captureInProgressRef = useRef(false);
   const captureTokenRef = useRef(0);
   const uploadedPreviewUrlRef = useRef("");
@@ -72,6 +77,8 @@ function CameraCapture({
   }, []);
 
   const handleFileSelected = useCallback((file) => {
+    candidateFacesRef.current = [];
+    lockedFacesRef.current = [];
     if (phaseRef.current === "countdown" || phaseRef.current === "capture_check") {
       captureTokenRef.current += 1;
       captureInProgressRef.current = false;
@@ -114,11 +121,12 @@ function CameraCapture({
     };
     setCaptureError(mappedError);
     setCameraPhase("error");
-    onCameraError(mappedError);
-  }, [onCameraError, setCameraPhase]);
+  }, [setCameraPhase]);
 
   const resetAlignment = useCallback(() => {
     trackerRef.current = createFaceCountState(peopleCount);
+    candidateFacesRef.current = [];
+    lockedFacesRef.current = [];
     setCountdownValue(null);
     setCaptureError(null);
     setCameraPhase("aligning");
@@ -134,7 +142,6 @@ function CameraCapture({
     setCameraPhase("capture_check");
     setCountdownValue(null);
     setCaptureError(null);
-    onLog({ level: "info", event: "capture_started", message: "Capturing the high-resolution group photo." });
 
     try {
       const video = videoRef.current;
@@ -172,19 +179,21 @@ function CameraCapture({
       if (!mountedRef.current || captureTokenRef.current !== captureToken || !captureInProgressRef.current) {
         return;
       }
-      if (finalDetection.count !== peopleCount) {
+      const finalMatchedCount = countMatchedFaces(
+        finalDetection.faces,
+        mirrorFaceBoxes(lockedFacesRef.current, width),
+        width,
+        height,
+      );
+      if (finalMatchedCount !== peopleCount) {
         const mismatchError = {
           code: "CAPTURE_COUNT_MISMATCH",
           message: "Please hold position and try again.",
           retryable: true,
         };
-        onLog({
-          level: "warning",
-          event: "capture_count_mismatch",
-          message: "The final captured frame did not match the selected guest count.",
-          details: { detected_count: finalDetection.count, expected_count: peopleCount },
-        });
         trackerRef.current = createFaceCountState(peopleCount);
+        candidateFacesRef.current = [];
+        lockedFacesRef.current = [];
         setCaptureError(mismatchError);
         setCameraPhase("aligning");
         return;
@@ -193,13 +202,7 @@ function CameraCapture({
       stopCamera();
       replacePreview(file);
       setCameraPhase("photo_ready");
-      onLog({
-        level: "success",
-        event: "capture_validated",
-        message: "The captured photo matches the selected guest count.",
-        details: { detected_count: finalDetection.count, width, height },
-      });
-      onCaptured(file, { width, height, faceCount: finalDetection.count });
+      onCaptured(file, { width, height, faceCount: finalMatchedCount });
     } catch (error) {
       if (!mountedRef.current || captureTokenRef.current !== captureToken || !captureInProgressRef.current) {
         return;
@@ -209,31 +212,51 @@ function CameraCapture({
         : { code: "CAPTURE_FAILED", message: error?.message || "The photo could not be captured. Please try again.", retryable: true };
       setCaptureError(mappedError);
       setCameraPhase("aligning");
-      onCameraError(mappedError);
     } finally {
       if (captureTokenRef.current === captureToken) {
         captureInProgressRef.current = false;
       }
     }
-  }, [detectImage, onCameraError, onCaptured, onLog, peopleCount, replacePreview, setCameraPhase, stopCamera]);
+  }, [detectImage, onCaptured, peopleCount, replacePreview, setCameraPhase, stopCamera]);
 
   const handleDetection = useCallback((result, timestamp) => {
     if (!mountedRef.current || captureInProgressRef.current || uploadedPreviewUrlRef.current) {
       return;
     }
-    if (result.count === peopleCount) {
+
+    const frameWidth = videoRef.current?.videoWidth;
+    const frameHeight = videoRef.current?.videoHeight;
+    if (!frameWidth || !frameHeight) {
+      return;
+    }
+
+    const captureCandidates = getCaptureCandidates(result.faces, frameWidth, frameHeight);
+    const primaryFaces = selectPrimaryFaces(captureCandidates, peopleCount, frameWidth, frameHeight);
+    const isCountdown = trackerRef.current.phase === "countdown";
+    let detectedCount = primaryFaces.length;
+
+    if (isCountdown && lockedFacesRef.current.length > 0) {
+      detectedCount = countMatchedFaces(captureCandidates, lockedFacesRef.current, frameWidth, frameHeight);
+    } else {
+      if (!areFaceSetsCompatible(candidateFacesRef.current, primaryFaces, frameWidth, frameHeight)) {
+        trackerRef.current = createFaceCountState(peopleCount);
+      }
+      candidateFacesRef.current = primaryFaces;
+    }
+
+    if (detectedCount === peopleCount) {
       setCaptureError((current) => current?.code === "CAPTURE_COUNT_MISMATCH" ? null : current);
     }
-    const transition = updateFaceCountState(trackerRef.current, result.count, timestamp);
+    const transition = updateFaceCountState(trackerRef.current, detectedCount, timestamp);
     trackerRef.current = transition.state;
     setCountdownValue(transition.state.countdownValue);
 
     if (transition.event === "countdown_started") {
-      onLog({ level: "success", event: "count_stable", message: "The selected guest count stayed stable for one second." });
-      onLog({ level: "info", event: "countdown_started", message: "Five-second countdown started." });
+      lockedFacesRef.current = primaryFaces;
     }
     if (transition.event === "countdown_reset") {
-      onLog({ level: "warning", event: "countdown_reset", message: "The detected guest count changed, so the countdown was reset." });
+      lockedFacesRef.current = [];
+      candidateFacesRef.current = primaryFaces;
     }
     if (transition.event === "capture_requested") {
       void capturePhoto();
@@ -242,13 +265,12 @@ function CameraCapture({
     if (transition.state.phase !== phaseRef.current) {
       setCameraPhase(transition.state.phase);
     }
-  }, [capturePhoto, onLog, peopleCount, setCameraPhase]);
+  }, [capturePhoto, peopleCount, setCameraPhase]);
 
   useEffect(() => {
     let cancelled = false;
     mountedRef.current = true;
     setCameraPhase("camera_loading");
-    onLog({ level: "info", event: "camera_starting", message: "Starting camera preview and local face detection." });
 
     async function openCamera() {
       const [cameraResult, detectorResult] = await Promise.all([
@@ -267,7 +289,6 @@ function CameraCapture({
         return;
       }
       setCameraPhase("aligning");
-      onLog({ level: "success", event: "camera_ready", message: "Camera and face detection are ready." });
     }
 
     void openCamera();
@@ -277,7 +298,7 @@ function CameraCapture({
       window.cancelAnimationFrame(animationFrameRef.current);
       stopCamera();
     };
-  }, [ensureReady, onLog, reportError, setCameraPhase, startCamera, stopCamera]);
+  }, [ensureReady, reportError, setCameraPhase, startCamera, stopCamera]);
 
   useEffect(() => {
     if (!isActive || detectorStatus !== "ready" || phase === "error" || phase === "capture_check" || uploadStatus === "checking" || uploadedPreviewUrl) {
@@ -328,7 +349,6 @@ function CameraCapture({
 
   function handleCancel() {
     stopCamera();
-    onLog({ level: "info", event: "camera_stopped", message: "Camera preview stopped." });
     onCancel();
   }
 
