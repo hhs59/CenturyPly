@@ -1,4 +1,4 @@
-import { ArrowRight, RefreshCw, RotateCcw } from "lucide-react";
+import { ArrowRight, Camera, RefreshCw, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import ErrorAlert from "./ErrorAlert.jsx";
 import PhotoPicker from "./PhotoPicker.jsx";
@@ -31,6 +31,7 @@ function CameraCapture({
   onFileSelected,
   onPhaseChange,
   onProceed,
+  onTakePhoto,
   uploadStatus,
 }) {
   const videoRef = useRef(null);
@@ -352,6 +353,37 @@ function CameraCapture({
     onCancel();
   }
 
+  async function handleTakePhoto() {
+    captureTokenRef.current += 1;
+    captureInProgressRef.current = false;
+    setCaptureError(null);
+    if (uploadedPreviewUrlRef.current) {
+      URL.revokeObjectURL(uploadedPreviewUrlRef.current);
+      uploadedPreviewUrlRef.current = "";
+      setUploadedPreviewUrl("");
+    }
+    onTakePhoto();
+
+    if (!isActive) {
+      setCameraPhase("camera_loading");
+      try {
+        const cameraResult = await startCamera(videoRef.current);
+        if (!mountedRef.current) {
+          return;
+        }
+        if (!cameraResult.ok) {
+          reportError(cameraResult.error);
+          return;
+        }
+      } catch (error) {
+        reportError(error);
+        return;
+      }
+    }
+
+    resetAlignment();
+  }
+
   const cameraErrorState = captureError || cameraError || (detectorStatus === "error" ? detectorError : null) || error;
   const visibleError = uploadStatus === "checking" ? null : cameraErrorState;
   const isDetectorError = detectorStatus === "error";
@@ -400,16 +432,21 @@ function CameraCapture({
       ) : visibleError ? (
         <div className="camera-fallback">
           {isDetectorError && (
-            <button className="secondary-button" type="button" onClick={handleRetryDetector}>
+            <button className="secondary-button camera-fallback-retry" type="button" onClick={handleRetryDetector}>
               <RefreshCw size={18} aria-hidden="true" /> Retry face detection
             </button>
           )}
-          <PhotoPicker
-            onFileSelected={handleFileSelected}
-            buttonClassName="primary-button"
-            disabled={isUploadLocked}
-            label="Upload image"
-          />
+          <div className="camera-fallback-actions">
+            <button className="secondary-button" type="button" onClick={handleTakePhoto} disabled={isUploadLocked}>
+              <Camera size={18} aria-hidden="true" /> Take photo
+            </button>
+            <PhotoPicker
+              onFileSelected={handleFileSelected}
+              buttonClassName="primary-button"
+              disabled={isUploadLocked}
+              label="Upload image"
+            />
+          </div>
         </div>
       ) : (
         <div className="camera-actions">
@@ -425,11 +462,6 @@ function CameraCapture({
         </div>
       )}
 
-      {!isPhotoReady && visibleError && (
-        <button className="text-button" type="button" onClick={handleCancel}>
-          <RotateCcw size={17} aria-hidden="true" /> Back
-        </button>
-      )}
     </section>
   );
 }

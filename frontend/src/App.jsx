@@ -277,7 +277,14 @@ function PhotoboothApp() {
       setState((current) => ({ ...current, step: "people", error: setupError("Choose the number of guests to continue.") }));
       return;
     }
-    setState((current) => ({ ...current, step: "camera_loading", scenarioId: normalizedScenarioId, error: null }));
+    setState((current) => ({
+      ...current,
+      step: "camera_loading",
+      scenarioId: normalizedScenarioId,
+      photoFile: null,
+      error: null,
+      uploadStatus: "idle",
+    }));
   }
 
   function handleStartOver() {
@@ -343,6 +350,7 @@ function PhotoboothApp() {
           onFileSelected={handleUploadSelected}
           onPhaseChange={handleCameraPhaseChange}
           onProceed={handlePhotoProceed}
+          onTakePhoto={handleStartCamera}
           peopleCount={state.peopleCount}
           uploadStatus={state.uploadStatus}
         />
@@ -406,10 +414,9 @@ function PhotoboothApp() {
       <section className="main-panel" aria-label="Century Ply AI Photobooth">
         <header className="hero-heading">
           <div className="brand-lockup">
-            <div className="brand-mark" aria-hidden="true"><span>CP</span></div>
             <div className="brand-copy">
-              <p className="eyebrow">Century Ply presents</p>
-              <h1 id="app-title" ref={appHeadingRef} tabIndex={-1}>AI Photobooth</h1>
+              <p className="brand-wordmark">Century Ply</p>
+              <h1 id="app-title" ref={appHeadingRef} tabIndex={-1}>The Vietnam Imperial Legacy</h1>
             </div>
           </div>
           <span className="header-accent" aria-hidden="true" />

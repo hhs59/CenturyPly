@@ -4,6 +4,11 @@ import ErrorAlert from "./ErrorAlert.jsx";
 
 const PEOPLE_COUNTS = [1, 2, 3, 4];
 
+function handlePreviewError(event) {
+  event.currentTarget.hidden = true;
+  event.currentTarget.parentElement?.classList.add("selected-scenario-art-missing");
+}
+
 function PeopleCountStep({
   peopleCount,
   scenarioId,
@@ -24,10 +29,12 @@ function PeopleCountStep({
       {scenario && (
         <div className="selected-scenario" style={{ "--scenario-accent": scenario.accent }}>
           <span className="selected-scenario-art" aria-hidden="true">
-            <img src={scenario.previewImage} alt="" />
+            <img src={scenario.previewImage} alt="" onError={handlePreviewError} />
+            <span className="selected-scenario-art-fallback">Preview coming soon</span>
           </span>
-          <span>
+          <span className="selected-scenario-copy">
             <strong>{scenario.name}</strong>
+            <small>{scenario.regionLabel} · {scenario.shortDescription}</small>
           </span>
         </div>
       )}

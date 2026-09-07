@@ -4,25 +4,54 @@ from __future__ import annotations
 
 
 SCENARIO_PROMPTS = {
-    "imperial_hue": (
-        "Scenario: Imperial Hue. Dress every guest in elegant, historically "
-        "inspired Vietnamese imperial clothing with realistic silk, brocade, "
-        "embroidery, layered construction, and natural fabric weight. Place the "
-        "group naturally in a refined Hue imperial palace with warm architectural "
-        "light, restrained ornamental detail, and believable depth."
+    "thang_long_imperial": (
+        "Location: Hoàng Thành Thăng Long, the Thang Long Imperial Citadel in "
+        "northern Vietnam. Dress every guest in formal Vietnamese court-inspired "
+        "áo tấc or áo ngũ thân with refined silk, brocade, restrained embroidery, "
+        "and respectful khăn đóng details. Place the group naturally among the "
+        "citadel's imperial courtyards and historic architecture with dignified "
+        "northern light and believable depth."
     ),
-    "temple_aodai": (
-        "Scenario: Timeless Ao Dai. Dress every guest in an elegant traditional "
-        "Vietnamese áo dài with realistic silk texture, tailored construction, "
-        "subtle embroidery, and culturally respectful styling. Place the group at "
-        "the Temple of Literature in Hanoi with warm daylight, historic courtyards, "
-        "and softly defocused architecture."
+    "hoa_lu_capital": (
+        "Location: Cố đô Hoa Lư, the Hoa Lu Ancient Capital in northern Vietnam. "
+        "Dress every guest in period-respectful Vietnamese áo tấc or áo ngũ thân "
+        "with natural silk, brocade, subtle embroidery, and graceful construction. "
+        "Place the group in the ancient capital's historic courtyards and gateways, "
+        "with a calm mountain-framed setting and believable photographic depth."
     ),
-    "hoian_heritage": (
-        "Scenario: Hoi An Heritage. Dress every guest in refined traditional "
-        "Vietnamese clothing with realistic woven fabric, tasteful details, and "
-        "natural fit. Place the group in lantern-lit Hoi An at blue hour with warm "
-        "lantern glow, an atmospheric old-town street, and convincing photographic depth."
+    "hue_imperial_city": (
+        "Location: Đại Nội Huế, the Hue Imperial City in central Vietnam. Dress "
+        "every guest in elegant Vietnamese imperial court clothing with realistic "
+        "silk, brocade, floral embroidery, and period-respectful áo Nhật Bình, áo "
+        "tấc, or áo ngũ thân influences. Place the group naturally in the refined "
+        "palace courtyards of the Đại Nội with warm architectural light and depth."
+    ),
+    "thai_hoa_palace": (
+        "Location: Điện Thái Hòa, the Thai Hoa Palace in Huế. Dress every guest in "
+        "formal Nguyễn-era Vietnamese court styling with rich but tasteful silk, "
+        "brocade, embroidery, and áo Nhật Bình, áo tấc, or áo ngũ thân influences. "
+        "Place the group inside a dignified ceremonial palace setting with lacquered "
+        "wood, restrained imperial red and gold, and believable light."
+    ),
+    "an_dinh_palace": (
+        "Location: Cung An Định, An Dinh Palace in Huế. Dress every guest in elegant "
+        "Nguyễn court-inspired garments with tailored silk, brocade, quiet embroidery, "
+        "and natural fabric weight. Place the group in the palace's ornate historic "
+        "setting and intimate courtyards with refined warm light and convincing depth."
+    ),
+    "independence_palace": (
+        "Location: Dinh Độc Lập / Dinh Thống Nhất, Independence Palace in southern "
+        "Vietnam. Dress every guest in formal Vietnamese áo dài or refined heritage "
+        "clothing with natural silk, tailored construction, and subtle embroidery. "
+        "Place the group against the palace's composed architectural setting with "
+        "warm southern light, dignified scale, and no modern crowds."
+    ),
+    "gia_long_palace": (
+        "Location: Dinh Gia Long, Gia Long Palace in southern Vietnam. Dress every "
+        "guest in formal áo ngũ thân, áo dài, or court-inspired Vietnamese heritage "
+        "styling with realistic silk, brocade, and restrained embroidery. Place the "
+        "group naturally among the palace's historic architecture and gracious "
+        "courtyards with warm southern light and believable photographic depth."
     ),
 }
 
@@ -37,6 +66,9 @@ same {people_count} guests and transform every guest. Preserve each guest's
 recognizable facial identity, facial proportions, skin tone, natural skin texture,
 age, hairstyle, expression, body position, relative height, and left-to-right
 arrangement. Keep the guests distinct and clearly visible.
+
+Preserve each guest's natural skin tone exactly as photographed. Do not lighten,
+darken, recolor, homogenize, or stereotype skin tone or facial features.
 
 Do not add, remove, replace, merge, swap, or duplicate any person or face. Do not
 assign one guest's face to another guest's body. Do not add background people,

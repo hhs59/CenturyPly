@@ -1,17 +1,25 @@
 :root {
   color-scheme: light;
   font-family: "DM Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #f4eee5;
+  background: #f5ede1;
   color: #2b1c17;
-  --background: #f4eee5;
+  --ivory: #f5ede1;
+  --ivory-deep: #ece0cf;
   --paper: #fffaf3;
   --paper-strong: #fffdf9;
-  --ink: #2b1c17;
-  --ink-soft: #695a50;
-  --wine: #861f25;
-  --wine-deep: #5e171d;
-  --gold: #b78138;
-  --gold-light: #e4c58b;
+  --dark-wood: #2b1c17;
+  --dark-wood-soft: #695a50;
+  --imperial-red: #861f25;
+  --imperial-red-deep: #5e171d;
+  --restrained-gold: #b78138;
+  --restrained-gold-soft: #e4c58b;
+  --background: var(--ivory);
+  --ink: var(--dark-wood);
+  --ink-soft: var(--dark-wood-soft);
+  --wine: var(--imperial-red);
+  --wine-deep: var(--imperial-red-deep);
+  --gold: var(--restrained-gold);
+  --gold-light: var(--restrained-gold-soft);
   --line: rgba(93, 55, 29, 0.18);
   --line-strong: rgba(134, 31, 37, 0.42);
   --error: #a22b2d;
@@ -185,29 +193,21 @@ summary:focus-visible {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 12px;
 }
 
-.brand-mark {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 1px solid rgba(183, 129, 56, 0.68);
-  border-radius: 50%;
-  background: linear-gradient(145deg, var(--wine), #bd8137);
-  color: #fffaf2;
-  font-size: 0.78rem;
+.brand-wordmark {
+  color: var(--wine);
+  font-size: clamp(0.78rem, 1.2vw, 0.92rem);
   font-weight: 800;
-  letter-spacing: -0.1em;
-  box-shadow: 0 7px 18px rgba(134, 31, 37, 0.18);
+  letter-spacing: 0.13em;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .brand-copy {
   display: grid;
   min-width: 0;
-  gap: 1px;
+  gap: 3px;
 }
 
 .hero-heading h1,
@@ -218,7 +218,7 @@ summary:focus-visible {
 .hero-heading h1 {
   overflow: hidden;
   color: var(--ink);
-  font-size: clamp(1rem, 1.8vw, 1.28rem);
+  font-size: clamp(0.98rem, 1.8vw, 1.28rem);
   font-weight: 800;
   line-height: 1.05;
   letter-spacing: -0.035em;
@@ -233,6 +233,16 @@ summary:focus-visible {
   letter-spacing: 0.16em;
   line-height: 1.2;
   text-transform: uppercase;
+}
+
+.hero-slogan {
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 0.66rem;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header-accent {
@@ -306,6 +316,52 @@ summary:focus-visible {
 
 .scenario-step {
   max-width: 1280px;
+  padding-top: clamp(22px, 3vw, 36px);
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+}
+
+.scenario-filter-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: -10px auto 18px;
+}
+
+.scenario-filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid rgba(134, 31, 37, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 253, 249, 0.68);
+}
+
+.scenario-filter-button {
+  min-width: 92px;
+  min-height: 46px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--wine);
+  cursor: pointer;
+  font-size: 0.74rem;
+  font-weight: 800;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.scenario-filter-button:hover {
+  border-color: var(--gold);
+  transform: translateY(-1px);
+}
+
+.scenario-filter-button-selected {
+  border-color: var(--wine);
+  background: var(--wine);
+  color: var(--paper-strong);
 }
 
 .people-step {
@@ -324,22 +380,25 @@ summary:focus-visible {
 }
 
 .scenario-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(12px, 2vw, 22px);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(10px, 1.4vw, 16px);
   width: 100%;
 }
 
 .scenario-option {
   position: relative;
   display: flex;
-  min-width: 0;
-  min-height: clamp(250px, 32vw, 380px);
+  width: calc((100% - 48px) / 4);
+  min-width: 210px;
+  min-height: 0;
+  aspect-ratio: 16 / 10;
   flex-direction: column;
   overflow: hidden;
   padding: 0;
   border: 2px solid rgba(255, 255, 255, 0.65);
-  border-radius: 22px;
+  border-radius: 18px;
   background: #5b3a2d;
   color: #fff;
   cursor: pointer;
@@ -354,8 +413,8 @@ summary:focus-visible {
 }
 
 .scenario-option-selected {
-  border-color: var(--scenario-accent);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--scenario-accent) 28%, transparent), 0 20px 44px rgba(71, 39, 23, 0.2);
+  border-color: var(--gold-light);
+  box-shadow: 0 0 0 4px rgba(183, 129, 56, 0.26), 0 18px 38px rgba(71, 39, 23, 0.2);
 }
 
 .scenario-art {
@@ -364,6 +423,32 @@ summary:focus-visible {
   display: block;
   overflow: hidden;
   background: #5b3a2d;
+}
+
+.scenario-art-fallback {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: none;
+  place-items: center;
+  padding: 22px;
+  background:
+    radial-gradient(circle at 35% 22%, rgba(228, 197, 139, 0.34), transparent 33%),
+    linear-gradient(135deg, var(--wine-deep), #3c241b 72%);
+  color: rgba(255, 250, 243, 0.76);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.scenario-art-missing .scenario-art-fallback {
+  display: grid;
+}
+
+.scenario-art-missing img {
+  display: none;
 }
 
 .scenario-art::before,
@@ -375,7 +460,7 @@ summary:focus-visible {
 }
 
 .scenario-art::before {
-  background: linear-gradient(180deg, rgba(32, 15, 10, 0.02) 26%, rgba(32, 15, 10, 0.12) 52%, rgba(32, 15, 10, 0.84) 100%);
+  background: linear-gradient(180deg, rgba(32, 15, 10, 0.01) 42%, rgba(32, 15, 10, 0.76) 100%);
 }
 
 .scenario-art::after {
@@ -404,22 +489,13 @@ summary:focus-visible {
   bottom: 0;
   left: 0;
   display: grid;
-  gap: 5px;
-  padding: 22px clamp(16px, 2vw, 26px) clamp(17px, 2vw, 24px);
-}
-
-.scenario-copy small {
-  color: var(--gold-light);
-  font-size: 0.64rem;
-  font-weight: 800;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
+  padding: 32px 16px 15px;
 }
 
 .scenario-copy strong {
   color: #fffaf2;
-  font-size: clamp(1.08rem, 2vw, 1.42rem);
-  line-height: 1.08;
+  font-size: clamp(0.98rem, 1.35vw, 1.16rem);
+  line-height: 1.12;
   text-shadow: 0 2px 14px rgba(0, 0, 0, 0.3);
 }
 
@@ -434,9 +510,17 @@ summary:focus-visible {
   place-items: center;
   border: 2px solid rgba(255, 253, 249, 0.75);
   border-radius: 50%;
-  background: var(--scenario-accent);
-  color: var(--ink);
+  background: var(--gold);
+  color: #fffaf2;
   box-shadow: 0 5px 16px rgba(0, 0, 0, 0.18);
+}
+
+.scenario-step .setup-actions {
+  position: sticky;
+  z-index: 5;
+  bottom: 0;
+  margin-top: 18px;
+  padding-top: 12px;
 }
 
 .people-count-grid {
@@ -521,6 +605,30 @@ summary:focus-visible {
   background: #5b3a2d;
 }
 
+.selected-scenario-art-fallback {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: none;
+  place-items: center;
+  padding: 10px;
+  background: linear-gradient(135deg, var(--wine-deep), #3c241b 72%);
+  color: rgba(255, 250, 243, 0.76);
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.selected-scenario-art-missing .selected-scenario-art-fallback {
+  display: grid;
+}
+
+.selected-scenario-art-missing img {
+  display: none;
+}
+
 .selected-scenario-art::after {
   position: absolute;
   inset: 0;
@@ -535,7 +643,7 @@ summary:focus-visible {
   object-fit: cover;
 }
 
-.selected-scenario > span:last-child {
+.selected-scenario-copy {
   display: grid;
   min-width: 0;
   gap: 3px;
@@ -547,6 +655,14 @@ summary:focus-visible {
   font-size: 1rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.selected-scenario small {
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
 }
 
 .setup-actions,
@@ -762,16 +878,25 @@ summary:focus-visible {
 }
 
 .camera-fallback {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
   width: min(100%, 760px);
   margin: 18px auto 0;
 }
 
-.camera-fallback .primary-button,
-.camera-fallback .secondary-button {
+.camera-fallback-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.camera-fallback-retry {
   width: 100%;
+  margin-bottom: 12px;
+}
+
+.camera-fallback-actions .primary-button,
+.camera-fallback-actions .secondary-button {
+  width: 100%;
+  min-width: 0;
 }
 
 .text-button {
@@ -937,7 +1062,8 @@ summary:focus-visible {
 
 @media (max-width: 900px) {
   .scenario-option {
-    min-height: 290px;
+    width: calc((100% - 32px) / 3);
+    min-width: 190px;
   }
 
   .camera-frame {
@@ -959,16 +1085,22 @@ summary:focus-visible {
     padding: 28px 16px max(22px, env(safe-area-inset-bottom));
   }
 
-  .scenario-grid {
-    grid-template-columns: 1fr;
+  .scenario-filters {
+    width: 100%;
+    border-radius: 18px;
+  }
+
+  .scenario-filter-button {
+    flex: 1 1 auto;
   }
 
   .scenario-option {
-    min-height: 168px;
+    width: calc((100% - 12px) / 2);
+    min-width: 138px;
   }
 
   .scenario-copy {
-    padding-top: 16px;
+    padding: 28px 13px 13px;
   }
 
   .selected-scenario-art {
@@ -1005,22 +1137,25 @@ summary:focus-visible {
     border-radius: 19px;
   }
 
-  .camera-fallback {
-    grid-template-columns: 1fr;
+  .camera-fallback-actions {
+    gap: 6px;
   }
 
   .photo-review-actions,
-  .camera-actions {
+  .camera-actions,
+  .camera-fallback-actions {
     gap: 6px;
   }
 
   .photo-review-actions button,
-  .camera-actions button {
+  .camera-actions button,
+  .camera-fallback-actions button {
     padding-inline: 8px;
     font-size: 0.75rem;
   }
 
-  .photo-review-actions svg {
+  .photo-review-actions svg,
+  .camera-fallback-actions svg {
     display: none;
   }
 
@@ -1030,17 +1165,20 @@ summary:focus-visible {
 }
 
 @media (max-width: 390px) {
-  .brand-mark {
-    width: 38px;
-    height: 38px;
-  }
-
   .hero-heading h1 {
-    font-size: 0.95rem;
+    font-size: 0.84rem;
   }
 
   .eyebrow {
     font-size: 0.55rem;
+  }
+
+  .brand-wordmark {
+    font-size: 0.68rem;
+  }
+
+  .hero-slogan {
+    font-size: 0.52rem;
   }
 
   .card-heading h2,
