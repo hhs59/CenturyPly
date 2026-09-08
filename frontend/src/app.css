@@ -161,10 +161,9 @@ summary:focus-visible {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
+  justify-content: center;
   width: 100%;
-  padding: max(13px, env(safe-area-inset-top)) clamp(18px, 4vw, 58px) 13px;
+  padding: max(12px, env(safe-area-inset-top)) clamp(18px, 4vw, 58px) 12px;
   border-top: 2px solid var(--wine);
   border-bottom: 1px solid rgba(93, 55, 29, 0.16);
   background: rgba(247, 239, 225, 0.78);
@@ -174,8 +173,11 @@ summary:focus-visible {
 
 .brand-lockup {
   display: flex;
+  width: 100%;
   min-width: 0;
   align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .brand-wordmark {
@@ -190,7 +192,8 @@ summary:focus-visible {
 .brand-copy {
   display: grid;
   min-width: 0;
-  gap: 3px;
+  justify-items: center;
+  gap: 4px;
 }
 
 .hero-heading h1,
@@ -208,49 +211,6 @@ summary:focus-visible {
   letter-spacing: 0.01em;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.eyebrow {
-  color: var(--gold);
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  line-height: 1.2;
-  text-transform: uppercase;
-}
-
-.hero-slogan {
-  overflow: hidden;
-  color: var(--ink-soft);
-  font-size: 0.66rem;
-  letter-spacing: 0.02em;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.header-accent {
-  position: relative;
-  display: block;
-  width: clamp(50px, 10vw, 112px);
-  height: 5px;
-  flex: 0 0 auto;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--gold-light), var(--wine));
-  opacity: 0.8;
-}
-
-.header-accent::after {
-  position: absolute;
-  top: 50%;
-  right: -5px;
-  width: 11px;
-  height: 11px;
-  border: 2px solid var(--wine);
-  border-radius: 50%;
-  background: var(--paper-strong);
-  content: "";
-  transform: translateY(-50%);
 }
 
 .content-card {
@@ -1110,10 +1070,6 @@ summary:focus-visible {
     padding-left: 16px;
   }
 
-  .header-accent {
-    width: 52px;
-  }
-
   .content-card {
     padding: 28px 16px max(22px, env(safe-area-inset-bottom));
   }
@@ -1217,16 +1173,8 @@ summary:focus-visible {
     font-size: 0.84rem;
   }
 
-  .eyebrow {
-    font-size: 0.55rem;
-  }
-
   .brand-wordmark {
     font-size: 0.68rem;
-  }
-
-  .hero-slogan {
-    font-size: 0.52rem;
   }
 
   .card-heading h2,

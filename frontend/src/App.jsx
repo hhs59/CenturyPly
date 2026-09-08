@@ -305,7 +305,6 @@ function PhotoboothApp() {
               <h1 id="app-title" ref={appHeadingRef} tabIndex={-1}>The Vietnam Imperial Legacy</h1>
             </div>
           </div>
-          <span className="header-accent" aria-hidden="true" />
         </header>
 
         {renderStep()}
