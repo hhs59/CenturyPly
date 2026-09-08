@@ -76,6 +76,12 @@ and do not reproduce incidental background people. Do not add background people,
 statues with visible faces, additional people, or crowds. Do not turn one person into multiple people.
 Keep every complete face and the top of every head visible.
 
+Remove modern personal items and distractions, including phones, earbuds, watches,
+smartwatches, badges, lanyards, bags, and visible electronics. Replace obviously
+modern jewelry with restrained, period-appropriate Vietnamese accessories. Preserve
+prescription glasses and subtle culturally or personally significant jewelry unless
+they obscure a face or conflict with the historical styling.
+
 Create one cohesive, photorealistic vertical 3:4 group photograph. Use natural
 skin detail, realistic eyes and hair, physically believable light, and a flattering
 eye-level perspective. Transform every selected guest with the selected clothing and place

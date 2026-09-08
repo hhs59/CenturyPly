@@ -5,7 +5,10 @@ function PortraitSpinner() {
   return (
     <div className="portrait-spinner" role="img" aria-label="Portrait generation in progress">
       <span className="portrait-spinner-ring" />
-      <span className="portrait-spinner-core">CP</span>
+      <span className="portrait-spinner-core">
+        <strong>CP</strong>
+        <small>Imperial portrait</small>
+      </span>
     </div>
   );
 }
