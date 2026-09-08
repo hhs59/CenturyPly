@@ -12,12 +12,10 @@ import {
   Download,
   Eye,
   FileDown,
-  FileText,
   Filter,
   Image as ImageIcon,
   RefreshCw,
   Search,
-  Server,
   Terminal,
   Users,
   X,
@@ -56,14 +54,6 @@ function formatDate(value) {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function formatBytes(value) {
-  const bytes = Number(value) || 0;
-  if (!bytes) return "—";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function scenarioName(scenarioId) {
@@ -382,63 +372,6 @@ function PhotoModal({ photo, onClose }) {
   );
 }
 
-function JobDetailModal({ detail, loading, onClose }) {
-  const [activeTab, setActiveTab] = useState("log");
-  const logs = detail?.logs || [];
-  const tabs = [
-    { id: "log", label: "Processing log", count: logs.length },
-    { id: "request", label: "Request", count: null },
-    { id: "result", label: "Result", count: null },
-  ];
-  return (
-    <div className="dashboard-modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <section className="dashboard-modal dashboard-job-modal" role="dialog" aria-modal="true" aria-labelledby="dashboard-job-title">
-        <header className="dashboard-modal-header">
-          <div>
-            <span className="dashboard-modal-eyebrow"><Server size={14} aria-hidden="true" /> Job detail</span>
-            <h2 id="dashboard-job-title">{detail?.jobId || "Loading job"}</h2>
-          </div>
-          <button type="button" className="dashboard-icon-button" onClick={onClose} aria-label="Close job detail"><X size={18} /></button>
-        </header>
-        {loading || !detail ? (
-          <div className="dashboard-modal-loading"><RefreshCw size={24} className="dashboard-spin" /><span>Loading operational details…</span></div>
-        ) : (
-          <div className="dashboard-job-content">
-            <div className="dashboard-job-summary">
-              <span className={statusClass(String(detail.status || "").toLowerCase())}>{statusLabel(String(detail.status || "").toLowerCase())}</span>
-              <span>{scenarioName(detail.conceptId)}</span>
-              <span>{detail.peopleCount || 0} guest(s)</span>
-              <span>{formatBytes(detail.result?.output_byte_count)} output</span>
-              <span>Updated {formatDate(detail.updatedAt)}</span>
-            </div>
-            <nav className="dashboard-detail-tabs" aria-label="Job detail sections">
-              {tabs.map((tab) => (
-                <button type="button" key={tab.id} className={activeTab === tab.id ? "dashboard-detail-tab-active" : ""} onClick={() => setActiveTab(tab.id)}>
-                  {tab.label}{tab.count !== null ? ` (${tab.count})` : ""}
-                </button>
-              ))}
-            </nav>
-            <div className="dashboard-detail-body">
-              {activeTab === "log" && (
-                <pre className="dashboard-console">{detail.logContent || "No operational log was recorded."}</pre>
-              )}
-              {activeTab === "request" && (
-                <pre className="dashboard-json-block">{JSON.stringify(detail.request || {}, null, 2)}</pre>
-              )}
-              {activeTab === "result" && (
-                <div className="dashboard-result-detail">
-                  <pre className="dashboard-json-block">{JSON.stringify(detail.result || {}, null, 2)}</pre>
-                  {detail.finalImageUrl && <img src={detail.finalImageUrl} alt="Generated portrait" />}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </section>
-    </div>
-  );
-}
-
 function SessionTable({ sessions, loading, onPhoto, onLogs }) {
   return (
     <div className="dashboard-table-wrap">
@@ -487,45 +420,13 @@ function SessionTable({ sessions, loading, onPhoto, onLogs }) {
   );
 }
 
-function JobsTable({ jobs, loading, onPhoto, onDetail }) {
-  return (
-    <div className="dashboard-table-wrap">
-      <table className="dashboard-table dashboard-jobs-table">
-        <thead>
-          <tr><th>Job ID</th><th>Status</th><th>Guests</th><th>Story</th><th>Output</th><th>Updated</th><th aria-label="Actions" /></tr>
-        </thead>
-        <tbody>
-          {loading ? Array.from({ length: 5 }, (_, index) => <tr key={`job-skeleton-${index}`} className="dashboard-skeleton-row">{Array.from({ length: 7 }, (_, cell) => <td key={cell}><span /></td>)}</tr>) : jobs.length === 0 ? (
-            <tr><td colSpan="7"><EmptyState message="No operational jobs have been recorded yet." /></td></tr>
-          ) : jobs.map((job) => (
-            <tr key={job.id}>
-              <td><code className="dashboard-job-id">{job.id}</code></td>
-              <td><span className={statusClass(job.status)}>{statusLabel(job.status)}</span></td>
-              <td>{job.people_count || 0}</td>
-              <td><span className="dashboard-story-pill">{scenarioName(job.scenario_id)}</span></td>
-              <td>{job.output_image_url ? <SessionThumbnail url={job.output_image_url} alt="Generated portrait" accent onClick={() => onPhoto({ url: job.output_image_url, title: `Generated portrait · ${job.id}` })} /> : <span className="dashboard-muted">No output</span>}</td>
-              <td className="dashboard-date">{formatDate(job.completed_at || job.created_at)}</td>
-              <td className="dashboard-table-action"><button type="button" className="dashboard-log-button" onClick={() => onDetail(job.id)}><Terminal size={14} /> Details</button></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState("sessions");
   const [overview, setOverview] = useState(null);
   const [sessions, setSessions] = useState([]);
-  const [jobs, setJobs] = useState([]);
   const [loadingOverview, setLoadingOverview] = useState(true);
   const [loadingSessions, setLoadingSessions] = useState(true);
-  const [loadingJobs, setLoadingJobs] = useState(false);
-  const [loadingJobDetail, setLoadingJobDetail] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [lastUpdated, setLastUpdated] = useState(null);
   const [health, setHealth] = useState(null);
   const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState("");
@@ -536,15 +437,12 @@ export default function Dashboard() {
   const [isExporting, setIsExporting] = useState(false);
   const [photoModal, setPhotoModal] = useState(null);
   const [logModal, setLogModal] = useState(null);
-  const [activeJobId, setActiveJobId] = useState("");
-  const [activeJobDetail, setActiveJobDetail] = useState(null);
 
   const loadOverview = useCallback(async () => {
     setLoadingOverview(true);
     try {
       const data = await fetchJson("/api/dashboard/overview");
       setOverview(data);
-      setLastUpdated(new Date());
     } catch (loadError) {
       setError(loadError.message || "Could not load dashboard overview.");
     } finally {
@@ -565,26 +463,12 @@ export default function Dashboard() {
       const data = await fetchJson(`/api/dashboard/sessions?${params.toString()}`);
       setSessions(Array.isArray(data.data) ? data.data : []);
       setMeta(data.meta || { current_page: page, total_pages: 1, total_items: 0 });
-      setLastUpdated(new Date());
     } catch (loadError) {
       setError(loadError.message || "Could not load session history.");
     } finally {
       setLoadingSessions(false);
     }
   }, [page, scenarioFilter, search, statusFilter]);
-
-  const loadJobs = useCallback(async () => {
-    setLoadingJobs(true);
-    try {
-      const data = await fetchJson("/api/dashboard/jobs");
-      setJobs(Array.isArray(data.data) ? data.data : []);
-      setLastUpdated(new Date());
-    } catch (loadError) {
-      setError(loadError.message || "Could not load operational jobs.");
-    } finally {
-      setLoadingJobs(false);
-    }
-  }, []);
 
   const loadHealth = useCallback(async () => {
     try {
@@ -600,26 +484,22 @@ export default function Dashboard() {
   }, [loadHealth, loadOverview]);
 
   useEffect(() => {
-    if (activeTab === "sessions") void loadSessions();
-    if (activeTab === "jobs") void loadJobs();
-  }, [activeTab, loadJobs, loadSessions]);
+    void loadSessions();
+  }, [loadSessions]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
       void loadOverview();
-      if (activeTab === "sessions") void loadSessions();
-      if (activeTab === "jobs") void loadJobs();
+      void loadSessions();
     }, 30_000);
     return () => window.clearInterval(timer);
-  }, [activeTab, loadJobs, loadOverview, loadSessions]);
+  }, [loadOverview, loadSessions]);
 
   useEffect(() => {
     const handleEscape = (event) => {
       if (event.key !== "Escape") return;
       setPhotoModal(null);
       setLogModal(null);
-      setActiveJobId("");
-      setActiveJobDetail(null);
     };
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
@@ -649,21 +529,6 @@ export default function Dashboard() {
     void loadOverview();
     void loadHealth();
     void loadSessions();
-    void loadJobs();
-  };
-
-  const handleOpenJob = async (jobId) => {
-    setActiveJobId(jobId);
-    setActiveJobDetail(null);
-    setLoadingJobDetail(true);
-    try {
-      const data = await fetchJson(`/api/dashboard/jobs/${encodeURIComponent(jobId)}`);
-      setActiveJobDetail(data.data);
-    } catch (loadError) {
-      setError(loadError.message || "Could not load job details.");
-    } finally {
-      setLoadingJobDetail(false);
-    }
   };
 
   const handleExport = async () => {
@@ -719,7 +584,7 @@ export default function Dashboard() {
           </div>
           <div className="dashboard-header-actions">
             <span className={`dashboard-service-state ${health ? "dashboard-service-online" : ""}`}><span />{health ? `Service online · ${modelLabel}` : "Service unavailable"}</span>
-            <button type="button" className="dashboard-secondary-button" onClick={handleRefresh}><RefreshCw size={15} className={loadingOverview || loadingSessions || loadingJobs ? "dashboard-spin" : ""} /> Refresh</button>
+            <button type="button" className="dashboard-secondary-button" onClick={handleRefresh}><RefreshCw size={15} className={loadingOverview || loadingSessions ? "dashboard-spin" : ""} /> Refresh</button>
             <a href="/" className="dashboard-primary-button"><Camera size={15} /> Open photobooth</a>
           </div>
         </header>
@@ -734,14 +599,7 @@ export default function Dashboard() {
           <StatCard label="Downloads" value={overviewValue("total_downloads")} description="Customer downloads" tone="cyan" icon={Download} />
         </section>
 
-        <section className="dashboard-tab-row" aria-label="Dashboard sections">
-          <button type="button" className={activeTab === "sessions" ? "dashboard-tab-active" : ""} onClick={() => setActiveTab("sessions")}><FileText size={15} /> Session reports</button>
-          <button type="button" className={activeTab === "jobs" ? "dashboard-tab-active" : ""} onClick={() => setActiveTab("jobs")}><Server size={15} /> Operational jobs</button>
-          <span className="dashboard-updated">{lastUpdated ? `Updated ${lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Loading data…"}</span>
-        </section>
-
-        {activeTab === "sessions" ? (
-          <>
+        <>
             <section className="dashboard-chart-grid">
               <article className="dashboard-panel dashboard-trend-panel"><div className="dashboard-panel-heading"><div><p className="dashboard-panel-kicker">Activity</p><h2>Generation trend</h2></div><span className="dashboard-panel-meta">Last 14 days</span></div><TrendChart labels={overview?.trend_labels || []} values={overview?.trend_values || []} /></article>
               <article className="dashboard-panel"><div className="dashboard-panel-heading"><div><p className="dashboard-panel-kicker">Preferences</p><h2>Story mix</h2></div><span className="dashboard-panel-meta">By scenario</span></div><ScenarioDonut entries={scenarioEntries} /></article>
@@ -756,15 +614,11 @@ export default function Dashboard() {
               <SessionTable sessions={sessions} loading={loadingSessions} onPhoto={setPhotoModal} onLogs={setLogModal} />
               {!loadingSessions && meta.total_pages > 1 && <div className="dashboard-pagination"><span>Page {meta.current_page} of {meta.total_pages}</span><div><button type="button" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))} aria-label="Previous page"><ChevronLeft size={16} /></button><button type="button" disabled={page >= meta.total_pages} onClick={() => setPage((current) => Math.min(meta.total_pages, current + 1))} aria-label="Next page"><ChevronRight size={16} /></button></div></div>}
             </section>
-          </>
-        ) : (
-          <section className="dashboard-panel dashboard-table-panel"><div className="dashboard-jobs-toolbar"><div><p className="dashboard-panel-kicker">Server monitor</p><h2>Operational jobs</h2><p>Inspect the sanitized request and provider timeline for each generation attempt.</p></div><button type="button" className="dashboard-secondary-button" onClick={() => void loadJobs()}><RefreshCw size={15} className={loadingJobs ? "dashboard-spin" : ""} /> Refresh jobs</button></div><JobsTable jobs={jobs} loading={loadingJobs} onPhoto={setPhotoModal} onDetail={handleOpenJob} /></section>
-        )}
+        </>
       </main>
 
       {photoModal && <PhotoModal photo={photoModal} onClose={() => setPhotoModal(null)} />}
       {logModal && <LogsModal session={logModal} onClose={() => setLogModal(null)} />}
-      {activeJobId && <JobDetailModal key={activeJobId} detail={activeJobDetail} loading={loadingJobDetail} onClose={() => { setActiveJobId(""); setActiveJobDetail(null); }} />}
     </div>
   );
 }

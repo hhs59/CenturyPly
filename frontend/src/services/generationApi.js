@@ -93,7 +93,7 @@ export async function generateImage({ peopleCount, scenarioId, file, signal }) {
         status: response.status,
       });
     }
-    return { requestId: payload.request_id, resultImage: payload.result_image, publishTicket: payload.photo_publish_ticket || "" };
+    return { resultImage: payload.result_image, publishTicket: payload.photo_publish_ticket || "" };
   }
 
   const errorCode = typeof payload?.error?.code === "string" ? payload.error.code : "GENERATION_FAILED";
@@ -119,16 +119,7 @@ export async function dataUrlToBlob(imageSource) {
     });
   }
 
-  const match = /^data:([^;,]+);base64,(.*)$/s.exec(imageSource);
-  if (!match) {
-    throw new GenerationApiError({ code: "API_INVALID_RESPONSE", message: "The generated image data is invalid." });
-  }
-  const binary = atob(match[2]);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  const blob = new Blob([bytes], { type: match[1] });
+  const blob = await fetch(imageSource).then((response) => response.blob());
   if (!blob.size) {
     throw new GenerationApiError({ code: "API_INVALID_RESPONSE", message: "The generated image is empty." });
   }

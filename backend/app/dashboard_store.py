@@ -206,29 +206,6 @@ class DashboardStore:
                 ),
             )
 
-    def update_logs(self, session_id: str, logs: Iterable[Any]) -> bool:
-        incoming = _normalize_logs(logs)
-        if not incoming:
-            return False
-        with self._lock:
-            row = self._connection.execute(
-                "SELECT logs_json FROM sessions WHERE id = ?", (session_id,)
-            ).fetchone()
-            if row is None:
-                return False
-            existing = _parse_logs(row["logs_json"])
-            known = {_log_fingerprint(entry) for entry in existing}
-            for entry in incoming:
-                if _log_fingerprint(entry) not in known:
-                    existing.append(entry)
-            existing = existing[-MAX_LOG_ENTRIES:]
-            with self._connection:
-                self._connection.execute(
-                    "UPDATE sessions SET logs_json = ? WHERE id = ?",
-                    (json.dumps(existing, ensure_ascii=False), session_id),
-                )
-        return True
-
     def list_sessions(
         self,
         *,
@@ -280,53 +257,6 @@ class DashboardStore:
                 "current_page": page,
                 "total_pages": total_pages,
                 "total_items": total_items,
-            },
-        }
-
-    def list_jobs(self, limit: int = 100) -> list[dict[str, Any]]:
-        with self._lock:
-            rows = self._connection.execute(
-                "SELECT * FROM sessions ORDER BY created_at DESC LIMIT ?", (max(1, min(limit, 500)),)
-            ).fetchall()
-        return [self._serialize_session(row) for row in rows]
-
-    def get_job_detail(self, session_id: str) -> dict[str, Any] | None:
-        with self._lock:
-            row = self._connection.execute(
-                "SELECT * FROM sessions WHERE id = ?", (session_id,)
-            ).fetchone()
-        if row is None:
-            return None
-        session = self._serialize_session(row)
-        logs = session["logs"]
-        log_content = "\n".join(
-            f"[{entry['timestamp']}] {entry['level'].upper()}: {entry['message']}"
-            for entry in logs
-        )
-        return {
-            "jobId": session["id"],
-            "status": session["status"].upper(),
-            "name": session["name"],
-            "conceptId": session["scenario_id"],
-            "peopleCount": session["people_count"],
-            "createdAt": session["created_at"],
-            "updatedAt": session["completed_at"] or session["created_at"],
-            "finalImageUrl": session["output_image_url"],
-            "logContent": log_content,
-            "logs": logs,
-            "request": {
-                "people_count": session["people_count"],
-                "scenario_id": session["scenario_id"],
-                "input_mime_type": session["input_mime_type"],
-                "input_byte_count": session["input_byte_count"],
-            },
-            "result": {
-                "status": session["status"],
-                "output_mime_type": session["output_mime_type"],
-                "output_byte_count": session["output_byte_count"],
-                "render_duration_ms": session["render_duration_ms"],
-                "error_code": session["error_code"],
-                "error_message": session["error_message"],
             },
         }
 
@@ -482,15 +412,6 @@ def _parse_logs(value: Any) -> list[dict[str, Any]]:
     except (TypeError, ValueError):
         return []
     return _normalize_logs(raw_logs)
-
-
-def _log_fingerprint(entry: dict[str, Any]) -> tuple[str, str, str, str]:
-    return (
-        str(entry.get("timestamp", "")),
-        str(entry.get("level", "")),
-        str(entry.get("event", "")),
-        str(entry.get("message", "")),
-    )
 
 
 def _safe_json(value: Any, depth: int = 0) -> Any:

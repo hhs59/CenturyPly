@@ -805,26 +805,6 @@ summary:focus-visible {
   min-width: 0;
 }
 
-.text-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 44px;
-  margin-top: 10px;
-  border: 0;
-  background: transparent;
-  color: var(--wine);
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 800;
-}
-
-.text-button:hover {
-  color: var(--gold);
-}
-
 .generation-card {
   max-width: 860px;
   justify-content: flex-start;

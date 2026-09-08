@@ -1,6 +1,4 @@
-import "@fontsource/cinzel/latin-ext-600.css";
-
-const JACKET_FONT = '"Cinzel", Georgia, "Times New Roman", serif';
+const JACKET_FONT = '"Cormorant Garamond", Georgia, "Times New Roman", serif';
 
 function fitText(context, text, maxWidth, preferredSize, minimumSize) {
   let size = preferredSize;
@@ -40,7 +38,7 @@ export async function createPhotoJacket(imageBlob, scenarioName = "Vietnam Imper
     throw new Error("The generated portrait is not available.");
   }
 
-  await document.fonts.load('600 48px "Cinzel"');
+  await document.fonts.load('600 48px "Cormorant Garamond"');
   const image = await createImageBitmap(imageBlob);
   const canvas = document.createElement("canvas");
   canvas.width = image.width;

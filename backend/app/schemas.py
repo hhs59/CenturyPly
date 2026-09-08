@@ -39,7 +39,3 @@ class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
     provider: Literal["gemini"] = "gemini"
     model: str
-
-
-class DashboardLogsRequest(BaseModel):
-    logs: list[dict[str, Any]]

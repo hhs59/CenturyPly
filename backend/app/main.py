@@ -20,7 +20,6 @@ from .photo_api import PhotoService, create_photo_router
 from .logging_utils import RequestLogger
 from .prompts import ALLOWED_PEOPLE_COUNTS, SCENARIO_IDS, build_image_generation_prompt
 from .schemas import (
-    DashboardLogsRequest,
     GenerationError,
     GenerationErrorResponse,
     GenerationSuccessResponse,
@@ -135,19 +134,6 @@ def dashboard_sessions(
     return {"ok": True, **result}
 
 
-@app.get("/api/dashboard/jobs")
-def dashboard_jobs() -> dict[str, Any]:
-    return {"ok": True, "data": dashboard_store.list_jobs()}
-
-
-@app.get("/api/dashboard/jobs/{job_id}")
-def dashboard_job_detail(job_id: str) -> dict[str, Any]:
-    detail = dashboard_store.get_job_detail(job_id)
-    if detail is None:
-        raise HTTPException(status_code=404, detail="Dashboard job not found.")
-    return {"ok": True, "data": detail}
-
-
 @app.get("/api/dashboard/sessions/{session_id}/image/{variant}")
 def dashboard_session_image(session_id: str, variant: str) -> FileResponse:
     image = dashboard_store.get_image(session_id, variant)
@@ -159,13 +145,6 @@ def dashboard_session_image(session_id: str, variant: str) -> FileResponse:
         media_type=mime_type,
         headers={"Cache-Control": "private, max-age=300"},
     )
-
-
-@app.post("/api/dashboard/sessions/{session_id}/logs")
-def dashboard_session_logs(session_id: str, payload: DashboardLogsRequest) -> dict[str, Any]:
-    if not dashboard_store.update_logs(session_id, payload.logs):
-        raise HTTPException(status_code=404, detail="Dashboard session not found.")
-    return {"ok": True, "session_id": session_id}
 
 
 @app.post("/api/generate")
