@@ -16,7 +16,7 @@ export default function PhotoQr({ blob, ticket }) {
         if (!ticket) throw new Error("QR publishing is unavailable.");
         const photo = await publishPhoto(blob, ticket, controller.signal);
         const url = new URL(photo.photo_url, window.location.origin).href;
-        const image = await QRCode.toDataURL(url, { width: 240, margin: 4, errorCorrectionLevel: "M" });
+        const image = await QRCode.toDataURL(url, { width: 560, margin: 4, errorCorrectionLevel: "M" });
         if (active) setState({ status: "ready", url, image });
       } catch {
         if (active) setState({ status: "error" });
@@ -32,7 +32,7 @@ export default function PhotoQr({ blob, ticket }) {
     <aside className="photo-qr" aria-label="Download on your phone" aria-live="polite">
       {state.status === "loading" && <p role="status">Preparing QR…</p>}
       {state.status === "error" && <><p>QR unavailable</p><button type="button" className="secondary-button" onClick={() => setAttempt((value) => value + 1)}>Retry QR</button></>}
-      {state.status === "ready" && <><a href={state.url} target="_blank" rel="noreferrer" aria-label="Open your photo download page"><img src={state.image} alt="Scan to download your portrait" width="240" height="240" /></a><p>Scan to download</p></>}
+      {state.status === "ready" && <><img src={state.image} alt="Scan to download your portrait" width="280" height="280" /><p>Scan with your phone camera</p></>}
     </aside>
   );
 }

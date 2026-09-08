@@ -6,7 +6,6 @@ export const SCENARIOS = [
     shortDescription: "Northern court elegance among ancient citadel walls",
     clothing: "Formal áo tấc or áo ngũ thân with refined silk, brocade, and khăn đóng details",
     setting: "The imperial courtyards and architecture of Hoàng Thành Thăng Long",
-    region: "northern",
     regionLabel: "Northern Vietnam",
     accent: "#b34a3f",
     previewImage: "/concepts/thang-long-imperial-scene.jpg",
@@ -18,7 +17,6 @@ export const SCENARIOS = [
     shortDescription: "Ceremonial heritage styling in Vietnam's first imperial capital",
     clothing: "Period-respectful áo tấc and áo ngũ thân in natural silk, brocade, and restrained embroidery",
     setting: "The historic gates, courtyards, and mountain-framed landscape of Cố đô Hoa Lư",
-    region: "northern",
     regionLabel: "Northern Vietnam",
     accent: "#9f613d",
     previewImage: "/concepts/hoa-lu-capital-scene.jpg",
@@ -30,7 +28,6 @@ export const SCENARIOS = [
     shortDescription: "Graceful royal portraits in the heart of the Đại Nội",
     clothing: "Vietnamese imperial court clothing with silk, brocade, and delicate floral embroidery",
     setting: "The dignified palace courtyards of Đại Nội Huế",
-    region: "central",
     regionLabel: "Central Vietnam",
     accent: "#a65b43",
     previewImage: "/concepts/hue-imperial-city-scene.jpg",
@@ -42,7 +39,6 @@ export const SCENARIOS = [
     shortDescription: "Ceremonial Nguyễn-era grandeur with a warm imperial glow",
     clothing: "Formal áo Nhật Bình, áo tấc, or áo ngũ thân-inspired court styling with rich woven detail",
     setting: "The ceremonial architecture and lacquered wood of Điện Thái Hòa",
-    region: "central",
     regionLabel: "Central Vietnam",
     accent: "#c08a42",
     previewImage: "/concepts/thai-hoa-palace-scene.jpg",
@@ -54,7 +50,6 @@ export const SCENARIOS = [
     shortDescription: "A refined palace portrait inspired by Huế's royal residence",
     clothing: "Elegant Nguyễn court-inspired garments with tailored silk, brocade, and quiet embroidery",
     setting: "The ornate palace setting and intimate courtyards of Cung An Định",
-    region: "central",
     regionLabel: "Central Vietnam",
     accent: "#b77452",
     previewImage: "/concepts/an-dinh-palace-scene.jpg",
@@ -66,7 +61,6 @@ export const SCENARIOS = [
     shortDescription: "Southern heritage elegance against a landmark palace setting",
     clothing: "Formal Vietnamese áo dài and refined heritage clothing with natural silk and subtle embroidery",
     setting: "The composed modernist lines of Dinh Độc Lập / Dinh Thống Nhất",
-    region: "southern",
     regionLabel: "Southern Vietnam",
     accent: "#b45b39",
     previewImage: "/concepts/independence-palace-scene.jpg",
@@ -78,18 +72,10 @@ export const SCENARIOS = [
     shortDescription: "A dignified southern palace portrait with timeless character",
     clothing: "Formal áo ngũ thân, áo dài, or court-inspired heritage styling in silk and brocade",
     setting: "The historic architecture and gracious courtyards of Dinh Gia Long",
-    region: "southern",
     regionLabel: "Southern Vietnam",
     accent: "#8f4d39",
     previewImage: "/concepts/gia-long-palace-scene.jpg",
   },
-];
-
-export const REGION_FILTERS = [
-  { id: "all", label: "All" },
-  { id: "northern", label: "North" },
-  { id: "central", label: "Central" },
-  { id: "southern", label: "South" },
 ];
 
 export const SCENARIO_IDS = new Set(SCENARIOS.map((scenario) => scenario.id));

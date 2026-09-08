@@ -8,7 +8,7 @@ function ResultView({ scenarioName, displayUrl, resultBlob, publishTicket, onSta
   return (
     <section className="content-card result-card" aria-labelledby="result-heading">
       <div className="card-heading">
-        <h2 id="result-heading" tabIndex={-1}>Your portrait is ready</h2>
+        <h2 id="result-heading" tabIndex={-1}>{showQr ? "Save to your phone" : "Your portrait is ready"}</h2>
         {scenarioName && <p className="result-story-name">{scenarioName}</p>}
       </div>
 

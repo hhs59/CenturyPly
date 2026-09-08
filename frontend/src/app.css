@@ -108,10 +108,7 @@ summary:focus-visible {
   min-height: 100svh;
   max-height: 100dvh;
   overflow: hidden;
-  background:
-    radial-gradient(ellipse at 3% 85%, #a8b5a3 0%, transparent 48%),
-    radial-gradient(ellipse at 100% 12%, #c58e72 0%, transparent 52%),
-    linear-gradient(125deg, #dfd5c4, #e8dcca 48%, #d4b79b);
+  background: #f5ede1;
 }
 
 .app-shell::before,
@@ -125,31 +122,16 @@ summary:focus-visible {
 .app-shell::before {
   z-index: 0;
   background-image:
-    linear-gradient(90deg, rgba(226, 216, 198, 0.94), rgba(226, 216, 198, 0.55)),
-    var(--story-image);
+    linear-gradient(rgba(255, 250, 241, 0.12), rgba(255, 250, 241, 0.12)),
+    url("/imperial-background-v1.jpg");
   background-position: center, center;
   background-size: cover, cover;
-  filter: saturate(0.78);
-  opacity: 0.44;
-  transition: opacity 240ms ease;
+  opacity: 1;
 }
 
 .app-shell::after {
   z-index: 0;
-  background:
-    repeating-radial-gradient(ellipse at 105% 110%, transparent 0 100px, rgba(72, 52, 31, 0.09) 101px 102px, transparent 103px 160px),
-    repeating-linear-gradient(0deg, rgba(64, 46, 29, 0.022) 0 1px, transparent 1px 4px);
-}
-
-.app-shell[data-step="scenario"]::before {
-  background-image:
-    radial-gradient(ellipse at 48% 42%, rgba(249, 240, 221, 0.6), transparent 65%);
-  opacity: 1;
-}
-
-.app-shell[data-step="people"]::before,
-.app-shell[data-step="result"]::before {
-  opacity: 0.72;
+  box-shadow: inset 0 0 80px rgba(140, 101, 48, 0.05);
 }
 
 .app-shell[data-step="camera_loading"]::before,
@@ -159,7 +141,7 @@ summary:focus-visible {
 .app-shell[data-step="camera_error"]::before,
 .app-shell[data-step="photo_ready"]::before,
 .app-shell[data-step="generating"]::before {
-  opacity: 0.28;
+  opacity: 0.65;
 }
 
 .main-panel {
@@ -184,9 +166,10 @@ summary:focus-visible {
   width: 100%;
   padding: max(13px, env(safe-area-inset-top)) clamp(18px, 4vw, 58px) 13px;
   border-top: 2px solid var(--wine);
-  border-bottom: 1px solid rgba(93, 55, 29, 0.12);
-  background: rgba(240, 232, 215, 0.75);
-  box-shadow: none;
+  border-bottom: 1px solid rgba(93, 55, 29, 0.16);
+  background: rgba(247, 239, 225, 0.78);
+  box-shadow: 0 10px 35px rgba(54, 25, 20, 0.1);
+  backdrop-filter: blur(14px) saturate(1.1);
 }
 
 .brand-lockup {
@@ -219,9 +202,10 @@ summary:focus-visible {
   overflow: hidden;
   color: var(--ink);
   font-size: clamp(0.98rem, 1.8vw, 1.28rem);
-  font-weight: 800;
-  line-height: 1.05;
-  letter-spacing: -0.035em;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -303,11 +287,13 @@ summary:focus-visible {
 .card-heading h2,
 .camera-card-heading h2 {
   margin: 0 0 28px;
-  color: var(--ink);
+  color: var(--wine-deep);
+  font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
   font-size: clamp(1.8rem, 4.7vw, 3.25rem);
-  font-weight: 700;
-  line-height: 1.03;
-  letter-spacing: -0.04em;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-wrap: balance;
 }
 
 .setup-card {
@@ -318,50 +304,6 @@ summary:focus-visible {
   max-width: 1280px;
   padding-top: clamp(22px, 3vw, 36px);
   padding-bottom: max(18px, env(safe-area-inset-bottom));
-}
-
-.scenario-filter-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  margin: -10px auto 18px;
-}
-
-.scenario-filters {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  padding: 6px;
-  border: 1px solid rgba(134, 31, 37, 0.14);
-  border-radius: 999px;
-  background: rgba(255, 253, 249, 0.68);
-}
-
-.scenario-filter-button {
-  min-width: 92px;
-  min-height: 46px;
-  padding: 0 18px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--wine);
-  cursor: pointer;
-  font-size: 0.74rem;
-  font-weight: 800;
-  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
-}
-
-.scenario-filter-button:hover {
-  border-color: var(--gold);
-  transform: translateY(-1px);
-}
-
-.scenario-filter-button-selected {
-  border-color: var(--wine);
-  background: var(--wine);
-  color: var(--paper-strong);
 }
 
 .people-step {
@@ -393,14 +335,13 @@ summary:focus-visible {
   width: calc((100% - 48px) / 4);
   min-width: 210px;
   min-height: 0;
-  aspect-ratio: 16 / 10;
   flex-direction: column;
   overflow: hidden;
   padding: 0;
   border: 2px solid rgba(255, 255, 255, 0.65);
   border-radius: 18px;
   background: #5b3a2d;
-  color: #fff;
+  color: #fffaf2;
   cursor: pointer;
   text-align: left;
   box-shadow: 0 14px 35px rgba(71, 39, 23, 0.13);
@@ -418,8 +359,10 @@ summary:focus-visible {
 }
 
 .scenario-art {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  flex-shrink: 0;
   display: block;
   overflow: hidden;
   background: #5b3a2d;
@@ -460,11 +403,11 @@ summary:focus-visible {
 }
 
 .scenario-art::before {
-  background: linear-gradient(180deg, rgba(32, 15, 10, 0.01) 42%, rgba(32, 15, 10, 0.76) 100%);
+  background: linear-gradient(180deg, transparent 35%, rgba(32, 15, 10, 0.8) 100%);
 }
 
 .scenario-art::after {
-  background: linear-gradient(90deg, rgba(21, 10, 7, 0.2), transparent 42%, rgba(21, 10, 7, 0.08));
+  background: none;
 }
 
 .scenario-art img {
@@ -489,14 +432,24 @@ summary:focus-visible {
   bottom: 0;
   left: 0;
   display: grid;
-  padding: 32px 16px 15px;
+  padding: 28px 16px 15px;
+  align-items: center;
+}
+
+.scenario-copy small {
+  color: var(--gold-light);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .scenario-copy strong {
   color: #fffaf2;
   font-size: clamp(0.98rem, 1.35vw, 1.16rem);
-  line-height: 1.12;
-  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.3);
+  line-height: 1.35;
+  font-weight: 700;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
 }
 
 .scenario-check {
@@ -520,7 +473,7 @@ summary:focus-visible {
   z-index: 5;
   bottom: 0;
   margin-top: 18px;
-  padding-top: 12px;
+  padding: 14px 12px;
 }
 
 .people-count-grid {
@@ -562,10 +515,11 @@ summary:focus-visible {
 
 .people-count-option strong {
   color: var(--wine);
+  font-family: "Cormorant Garamond", Georgia, serif;
   font-size: clamp(3rem, 7vw, 4.7rem);
-  font-weight: 800;
-  line-height: 0.86;
-  letter-spacing: -0.08em;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
 }
 
 .people-count-option-selected strong,
@@ -997,7 +951,7 @@ summary:focus-visible {
   margin: 16px auto;
 }
 
-.photo-qr img { display: block; width: 180px; height: 180px; border-radius: 12px; }
+.photo-qr img { display: block; width: min(280px, 66vw); height: auto; border-radius: 12px; }
 .photo-qr p { margin: 0; }
 .result-delivery { display: flex; align-items: center; justify-content: center; gap: 32px; margin-bottom: 20px; }
 .result-delivery .result-image-frame { margin: 0; }
@@ -1006,6 +960,7 @@ summary:focus-visible {
 .phone-photo-panel { width: min(100%, 520px); max-width: 520px; flex: none; overflow: visible; text-align: center; padding: 24px; margin: auto; }
 .phone-portrait { display: block; width: 100%; height: auto; border-radius: 12px; margin: 20px auto; }
 .phone-photo-panel .primary-button { width: 100%; }
+.phone-photo-panel h1 { font-family: "Cormorant Garamond", Georgia, serif; font-weight: 600; font-size: 2.5rem; margin: 12px 0; }
 @media (max-width: 600px) {
   .result-delivery { flex-direction: column; gap: 16px; }
 }
@@ -1105,22 +1060,41 @@ summary:focus-visible {
     padding: 28px 16px max(22px, env(safe-area-inset-bottom));
   }
 
-  .scenario-filters {
-    width: 100%;
-    border-radius: 18px;
+  .scenario-step {
+    padding-right: 0;
+    padding-left: 0;
   }
 
-  .scenario-filter-button {
-    flex: 1 1 auto;
+  .scenario-step .card-heading,
+  .scenario-step .error-alert,
+  .scenario-step .setup-actions {
+    margin-right: 16px;
+    margin-left: 16px;
+  }
+
+  .scenario-grid {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 4px 16px 16px;
+    overflow-x: auto;
+    scroll-padding-inline: 16px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .scenario-grid::-webkit-scrollbar {
+    display: none;
   }
 
   .scenario-option {
-    width: calc((100% - 12px) / 2);
-    min-width: 138px;
+    width: min(82vw, 360px);
+    min-width: min(82vw, 360px);
+    scroll-snap-align: center;
   }
 
   .scenario-copy {
-    padding: 28px 13px 13px;
+    padding: 28px 14px 14px;
   }
 
   .selected-scenario-art {
@@ -1219,8 +1193,9 @@ summary:focus-visible {
     padding-left: 17px;
   }
 
-  .result-actions {
-    grid-template-columns: 1fr;
+  .result-actions button {
+    padding-inline: 10px;
+    font-size: 0.78rem;
   }
 
   .camera-frame {

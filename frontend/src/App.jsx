@@ -295,7 +295,6 @@ function PhotoboothApp() {
       data-step={state.step}
       style={{
         "--story-accent": activeScenario?.accent || "#b8813f",
-        "--story-image": activeScenario?.previewImage ? `url("${activeScenario.previewImage}")` : "none",
       }}
     >
       <section className="main-panel" aria-label="Century Ply AI Photobooth">

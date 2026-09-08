@@ -34,7 +34,7 @@ function PeopleCountStep({
           </span>
           <span className="selected-scenario-copy">
             <strong>{scenario.name}</strong>
-            <small>{scenario.regionLabel} · {scenario.shortDescription}</small>
+            <small>{scenario.regionLabel}</small>
           </span>
         </div>
       )}
