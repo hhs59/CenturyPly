@@ -18,6 +18,8 @@ ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 class ProviderImageResult:
     image_bytes: bytes
     mime_type: str
+    width: int | None
+    height: int | None
     latency_ms: int
     http_status: int
 
@@ -54,6 +56,7 @@ class ImageGenerationService:
         mime_type: str,
         prompt: str,
         request_id: str,
+        reference_images: list[tuple[str, bytes, str]] | None = None,
     ) -> ProviderImageResult:
         api_key = self.settings.gemini_api_key.strip()
         if not api_key:
@@ -64,27 +67,32 @@ class ImageGenerationService:
                 retryable=False,
             )
 
-        payload = {
-            "contents": [{
-                "role": "user",
-                "parts": [
-                    {"text": prompt},
-                    {
-                        "inline_data": {
-                            "mime_type": mime_type,
-                            "data": base64.b64encode(image_bytes).decode("ascii"),
-                        },
-                    },
-                ],
-            }],
-            "generationConfig": {
-                "responseModalities": ["IMAGE"],
-                "responseFormat": {
-                    "image": {
-                        # The REST API expects the protobuf enum name here.
-                        "aspectRatio": "ASPECT_RATIO_THREE_BY_FOUR",
+        parts = [
+            {"text": prompt},
+            {"text": "ẢNH 1 — ảnh tham chiếu nhận diện khách; chỉ lấy danh tính khuôn mặt"},
+            {
+                "inline_data": {
+                    "mime_type": mime_type,
+                    "data": base64.b64encode(image_bytes).decode("ascii"),
+                },
+            },
+        ]
+        for label, reference_bytes, reference_mime_type in reference_images or []:
+            parts.extend([
+                {"text": label},
+                {
+                    "inline_data": {
+                        "mime_type": reference_mime_type,
+                        "data": base64.b64encode(reference_bytes).decode("ascii"),
                     },
                 },
+            ])
+
+        payload = {
+            "contents": [{"role": "user", "parts": parts}],
+            "generationConfig": {
+                "responseModalities": ["IMAGE"],
+                "imageConfig": {"aspectRatio": "9:16", "imageSize": "2K"},
             },
         }
         endpoint = f"{self.settings.gemini_base_url.rstrip('/')}/models/{self.settings.image_model}:generateContent"
@@ -130,9 +138,12 @@ class ImageGenerationService:
             ) from exc
 
         image_bytes, returned_mime_type = decode_provider_image(response_body)
+        width, height = raster_dimensions(image_bytes)
         return ProviderImageResult(
             image_bytes=image_bytes,
             mime_type=returned_mime_type,
+            width=width,
+            height=height,
             latency_ms=latency_ms,
             http_status=response.status_code,
         )
@@ -212,6 +223,35 @@ def decode_provider_image(response_body: Any) -> tuple[bytes, str]:
             return image_bytes, detected_mime_type
 
     raise ProviderError("PROVIDER_NO_IMAGE", "No image was returned. Please try again.")
+
+
+def raster_dimensions(image_bytes: bytes) -> tuple[int | None, int | None]:
+    """Read dimensions from PNG or JPEG headers without decoding the image."""
+    if image_bytes.startswith(b"\x89PNG\r\n\x1a\n") and len(image_bytes) >= 24:
+        return int.from_bytes(image_bytes[16:20], "big"), int.from_bytes(image_bytes[20:24], "big")
+    if image_bytes.startswith(b"\xff\xd8"):
+        offset = 2
+        sof_markers = {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}
+        while offset + 8 < len(image_bytes):
+            if image_bytes[offset] != 0xFF:
+                offset += 1
+                continue
+            marker = image_bytes[offset + 1]
+            offset += 2
+            if marker in {0xD8, 0xD9}:
+                continue
+            if offset + 2 > len(image_bytes):
+                break
+            length = int.from_bytes(image_bytes[offset:offset + 2], "big")
+            if length < 2 or offset + length > len(image_bytes):
+                break
+            if marker in sof_markers and length >= 7:
+                return (
+                    int.from_bytes(image_bytes[offset + 5:offset + 7], "big"),
+                    int.from_bytes(image_bytes[offset + 3:offset + 5], "big"),
+                )
+            offset += length
+    return None, None
 
 
 # Basic signatures are enough here; the image provider performs the real decode.

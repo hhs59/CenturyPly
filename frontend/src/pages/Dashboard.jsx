@@ -585,6 +585,7 @@ export default function Dashboard() {
           <div className="dashboard-header-actions">
             <span className={`dashboard-service-state ${health ? "dashboard-service-online" : ""}`}><span />{health ? `Service online · ${modelLabel}` : "Service unavailable"}</span>
             <button type="button" className="dashboard-secondary-button" onClick={handleRefresh}><RefreshCw size={15} className={loadingOverview || loadingSessions ? "dashboard-spin" : ""} /> Refresh</button>
+            <a href="/admin/prompts" className="dashboard-secondary-button">Prompt studio</a>
             <a href="/" className="dashboard-primary-button"><Camera size={15} /> Open photobooth</a>
           </div>
         </header>

@@ -46,6 +46,7 @@ function CameraCapture({
   const uploadRef = useRef(null);
   const mountedRef = useRef(true);
   const [phase, setPhase] = useState("camera_loading");
+  const [inputMode, setInputMode] = useState("camera");
   const [countdownValue, setCountdownValue] = useState(null);
   const [captureError, setCaptureError] = useState(null);
   const { isActive, cameraError, startCamera, stopCamera } = useCamera();
@@ -256,6 +257,15 @@ function CameraCapture({
     mountedRef.current = true;
     setCameraPhase("camera_loading");
 
+    if (inputMode !== "camera") {
+      stopCamera();
+      return () => {
+        cancelled = true;
+        mountedRef.current = false;
+        window.cancelAnimationFrame(animationFrameRef.current);
+      };
+    }
+
     async function openCamera() {
       const [cameraResult, detectorResult] = await Promise.all([
         startCamera(videoRef.current),
@@ -284,7 +294,7 @@ function CameraCapture({
       window.cancelAnimationFrame(animationFrameRef.current);
       stopCamera();
     };
-  }, [ensureReady, reportError, setCameraPhase, startCamera, stopCamera]);
+  }, [ensureReady, inputMode, reportError, setCameraPhase, startCamera, stopCamera]);
 
   useEffect(() => {
     if (!isActive || detectorStatus !== "ready" || phase === "error" || phase === "capture_check" || photoPreviewUrlRef.current) {
@@ -370,6 +380,12 @@ function CameraCapture({
     onRetake();
     setCameraPhase("camera_loading");
 
+    if (inputMode === "upload") {
+      setCameraPhase("aligning");
+      window.requestAnimationFrame(() => uploadRef.current?.click());
+      return;
+    }
+
     try {
       const cameraResult = await startCamera(videoRef.current);
       if (!mountedRef.current) {
@@ -390,13 +406,18 @@ function CameraCapture({
   async function handleUpload(event) {
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = "";
+    if (!file) {
+      setCameraPhase("aligning");
+      return;
+    }
     const validation = validateImageFile(file);
     if (!validation.valid) {
       setCaptureError({ code: validation.code, message: validation.message, retryable: false });
       return;
     }
 
-    captureTokenRef.current += 1;
+    const uploadToken = captureTokenRef.current + 1;
+    captureTokenRef.current = uploadToken;
     captureInProgressRef.current = true;
     setCaptureError(null);
     stopCamera();
@@ -405,6 +426,7 @@ function CameraCapture({
 
     try {
       const detection = await detectImage(file);
+      if (!mountedRef.current || captureTokenRef.current !== uploadToken) return;
       const candidates = getCaptureCandidates(detection.faces, detection.width, detection.height);
       const foregroundFaces = getDominantForegroundFaces(candidates, detection.width, detection.height);
       if (foregroundFaces.length !== peopleCount) {
@@ -425,6 +447,7 @@ function CameraCapture({
         faceCount: foregroundFaces.length,
       });
     } catch (detectionError) {
+      if (!mountedRef.current || captureTokenRef.current !== uploadToken) return;
       setCaptureError({
         code: "UPLOAD_DETECTION_FAILED",
         message: detectionError?.message || "The uploaded photo could not be checked. Please try another photo.",
@@ -432,17 +455,38 @@ function CameraCapture({
       });
       setCameraPhase("aligning");
     } finally {
-      captureInProgressRef.current = false;
+      if (captureTokenRef.current === uploadToken) captureInProgressRef.current = false;
     }
   }
 
   const openUpload = () => {
-    uploadRef.current?.click();
+    captureTokenRef.current += 1;
+    captureInProgressRef.current = false;
+    stopCamera();
+    setInputMode("upload");
+    setCaptureError(null);
+    setCountdownValue(null);
+    setCameraPhase("aligning");
+    window.requestAnimationFrame(() => uploadRef.current?.click());
+  };
+
+  const useCameraInstead = () => {
+    captureTokenRef.current += 1;
+    captureInProgressRef.current = false;
+    if (photoPreviewUrlRef.current) {
+      URL.revokeObjectURL(photoPreviewUrlRef.current);
+      photoPreviewUrlRef.current = "";
+    }
+    onRetake();
+    setCaptureError(null);
+    setCountdownValue(null);
+    setInputMode("camera");
+    setCameraPhase("camera_loading");
   };
 
   const cameraErrorState = captureError || cameraError || (detectorStatus === "error" ? detectorError : null) || error;
   const isDetectorError = detectorStatus === "error";
-  const visibleError = isPhotoReady ? null : cameraErrorState;
+  const visibleError = isPhotoReady ? null : inputMode === "upload" ? captureError : cameraErrorState;
   const isUploadError = captureError?.code?.startsWith("UPLOAD_")
     || captureError?.code?.startsWith("IMAGE_");
 
@@ -454,8 +498,15 @@ function CameraCapture({
         </div>
       )}
 
-      <div className="camera-frame" aria-label={isPhotoReady ? "Photo preview" : photoPreviewUrlRef.current ? "Photo preview" : "Live camera preview"}>
-        <video ref={videoRef} className="camera-video" playsInline muted autoPlay />
+      <div className="camera-frame" aria-label={isPhotoReady ? "Photo preview" : photoPreviewUrlRef.current ? "Photo preview" : inputMode === "upload" ? "Photo upload" : "Live camera preview"}>
+        {inputMode === "camera" && <video ref={videoRef} className="camera-video" playsInline muted autoPlay />}
+        {inputMode === "upload" && !photoPreviewUrlRef.current && (
+          <div className="camera-upload-placeholder">
+            <Upload size={42} aria-hidden="true" />
+            <strong>Upload your photo</strong>
+            <span>The camera is off</span>
+          </div>
+        )}
         {photoPreviewUrlRef.current ? (
           <img className="photo-preview" src={photoPreviewUrlRef.current} alt="Captured group photo preview" />
         ) : null}
@@ -475,6 +526,7 @@ function CameraCapture({
         type="file"
         accept={ACCEPTED_IMAGE_TYPES.join(",")}
         onChange={handleUpload}
+        onCancel={() => setCameraPhase("aligning")}
         tabIndex={-1}
       />
       <ErrorAlert error={visibleError} />
@@ -482,10 +534,19 @@ function CameraCapture({
       {isPhotoReady ? (
         <div className="photo-review-actions">
           <button className="secondary-button" type="button" onClick={handleBackToCamera}>
-            <RotateCcw size={17} aria-hidden="true" /> Back
+            <RotateCcw size={17} aria-hidden="true" /> {inputMode === "upload" ? "Choose another" : "Back"}
           </button>
           <button className="primary-button" type="button" onClick={onProceed}>
             Continue <ArrowRight size={19} aria-hidden="true" />
+          </button>
+        </div>
+      ) : inputMode === "upload" ? (
+        <div className="camera-actions">
+          <button className="secondary-button" type="button" onClick={useCameraInstead} disabled={phase === "capture_check"}>
+            <Camera size={18} aria-hidden="true" /> Use camera instead
+          </button>
+          <button className="primary-button" type="button" onClick={openUpload} disabled={phase === "capture_check"}>
+            <Upload size={18} aria-hidden="true" /> Choose photo
           </button>
         </div>
       ) : visibleError ? (

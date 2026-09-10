@@ -4,6 +4,7 @@ Firebase tests use SDK doubles: no cloud writes or billable Gemini calls.
 """
 import tempfile
 import importlib
+from io import BytesIO
 import threading
 import time
 import unittest
@@ -15,13 +16,23 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from firebase_admin import firestore
+from PIL import Image
 from google.api_core.exceptions import AlreadyExists, NotFound, PreconditionFailed
 
 from backend.app.config import Settings
 from backend.app.photo_api import PhotoService, create_photo_router
 from backend.app.photo_store import FirebasePhotoStore
 
-JPEG = (Path(__file__).resolve().parents[2] / "frontend/public/concepts/thang-long-imperial-scene.jpg").read_bytes()
+def jpeg_fixture(size=(4320, 7680)):
+    output = BytesIO()
+    with Image.new("RGB", size, "white") as image:
+        image.save(output, "JPEG", quality=1)
+    return output.getvalue()
+
+
+JPEG = jpeg_fixture()
+WRONG_SIZE_JPEG = jpeg_fixture((768, 1365))
+FORGED_JPEG = b"\xff\xd8\xff\xc0\x00\x11\x08\x1e\x00\x10\xe0\x03\x01\x11\x00\x02\x11\x00\x03\x11\x00\xff\xd9"
 
 
 def firebase_double():
@@ -174,7 +185,10 @@ class PhotoContract:
 
     def test_invalid_images_unknown_tokens_and_upload_limits(self):
         self.assertEqual(self.publish(content=b"not an image").status_code, 400)
-        self.settings.max_upload_bytes = 10
+        self.assertEqual(self.publish(content=FORGED_JPEG).status_code, 400)
+        self.assertEqual(self.publish(content=JPEG[:-2]).status_code, 400)
+        self.assertEqual(self.publish(content=WRONG_SIZE_JPEG).status_code, 400)
+        self.settings.max_final_photo_bytes = 10
         self.assertEqual(self.publish().status_code, 413)
         self.assertEqual(self.client.get("/api/photos/" + "x" * 32).status_code, 404)
         self.assertEqual(self.client.get("/api/photos/bad-token").status_code, 404)
@@ -262,7 +276,7 @@ class GenerationQrIntegrationTests(unittest.TestCase):
 
     def test_generation_publish_phone_download_and_dashboard(self):
         from backend.app.services.image_generation import ProviderImageResult
-        result = ProviderImageResult(JPEG, "image/jpeg", 1, 200)
+        result = ProviderImageResult(JPEG, "image/jpeg", 4320, 7680, 1, 200)
         with TestClient(self.main.app) as client, patch.object(self.main.image_service, "generate_image", new=AsyncMock(return_value=result)):
             generated = client.post("/api/generate", data={"people_count": 4, "scenario_id": next(iter(self.main.SCENARIO_IDS))},
                                     files={"image": ("input.jpg", JPEG, "image/jpeg")})
@@ -278,11 +292,11 @@ class GenerationQrIntegrationTests(unittest.TestCase):
             session = next(row for row in sessions if row["id"] == payload["request_id"])
             self.assertEqual(session["download_count"], 1)
             self.assertEqual(client.get("/api/dashboard/overview").json()["total_downloads"], 1)
-            self.assertEqual(client.post(f"/api/dashboard/sessions/{payload['request_id']}/action", json={"action": "download"}).status_code, 400)
+            self.assertEqual(client.post(f"/api/dashboard/sessions/{payload['request_id']}/action", json={"action": "download"}).status_code, 405)
 
     def test_qr_configuration_failure_does_not_lose_generated_portrait(self):
         from backend.app.services.image_generation import ProviderImageResult
-        result = ProviderImageResult(JPEG, "image/jpeg", 1, 200)
+        result = ProviderImageResult(JPEG, "image/jpeg", 4320, 7680, 1, 200)
         with TestClient(self.main.app) as client, patch.object(self.main.image_service, "generate_image", new=AsyncMock(return_value=result)), patch.object(self.main.photo_service, "issue_ticket", side_effect=ValueError("missing config")):
             with self.assertLogs("backend.app.main", level="ERROR"):
                 response = client.post("/api/generate", data={"people_count": 1, "scenario_id": next(iter(self.main.SCENARIO_IDS))},

@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     image_model: str = "gemini-3.1-flash-image"
     image_timeout_seconds: float = 120.0
     max_upload_bytes: int = 10_485_760
+    max_final_photo_bytes: int = 31_457_280
     frontend_origin: str = "http://localhost:5173"
     dashboard_data_dir: Path = PROJECT_ROOT / "backend" / "data"
     dashboard_timezone: str = "Asia/Ho_Chi_Minh"

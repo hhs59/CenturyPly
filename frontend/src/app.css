@@ -703,6 +703,34 @@ summary:focus-visible {
   transform: scaleX(-1);
 }
 
+.camera-upload-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  background: linear-gradient(145deg, #2b211d, #17110f);
+  color: #fffaf2;
+  text-align: center;
+}
+
+.camera-upload-placeholder svg {
+  color: var(--gold-light);
+}
+
+.camera-upload-placeholder strong {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(1.7rem, 4vw, 2.5rem);
+  font-weight: 600;
+}
+
+.camera-upload-placeholder span {
+  color: rgba(255, 250, 242, 0.7);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 .photo-preview {
   position: absolute;
   z-index: 1;
@@ -974,12 +1002,12 @@ summary:focus-visible {
 }
 
 .result-image-frame {
-  width: min(100%, 490px, 38svh);
+  width: min(100%, 430px, 34svh);
   overflow: hidden;
   margin: 0 auto 20px;
   border: 9px solid rgba(255, 253, 249, 0.95);
   border-radius: 5px;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 4320 / 8755;
   background: #1c1613;
   box-shadow: 0 16px 36px rgba(47, 24, 15, 0.22), 0 0 0 1px rgba(183, 129, 56, 0.45);
 }

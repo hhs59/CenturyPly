@@ -8,6 +8,7 @@ import { SCENARIO_IDS, getScenario } from "./config/scenarios.js";
 import { useFaceDetection } from "./hooks/useFaceDetection.js";
 import Dashboard from "./pages/Dashboard.jsx";
 import PhotoDownload from "./pages/PhotoDownload.jsx";
+import Prompts from "./pages/Prompts.jsx";
 import { dataUrlToBlob, GenerationApiError, generateImage } from "./services/generationApi.js";
 import { validateImageFile } from "./utils/imageValidation.js";
 import { createAppError } from "./utils/logging.js";
@@ -319,6 +320,9 @@ function App() {
   if (photoRoute) return <PhotoDownload token={photoRoute[1]} />;
   if (pathname === "/dashboard" || pathname === "/admin/dashboard") {
     return <Dashboard />;
+  }
+  if (pathname === "/prompts" || pathname === "/admin/prompts") {
+    return <Prompts />;
   }
   return <PhotoboothApp />;
 }

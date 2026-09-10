@@ -9,7 +9,7 @@ import logging
 from contextlib import asynccontextmanager, suppress
 from typing import Any
 
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import Body, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.concurrency import run_in_threadpool
@@ -18,7 +18,13 @@ from .config import get_settings
 from .dashboard_store import DashboardStore
 from .photo_api import PhotoService, create_photo_router
 from .logging_utils import RequestLogger
-from .prompts import ALLOWED_PEOPLE_COUNTS, SCENARIO_IDS, build_image_generation_prompt
+from .prompt_store import PromptConfigurationError, PromptStore
+from .prompts import (
+    ALLOWED_PEOPLE_COUNTS,
+    SCENARIO_IDS,
+    build_image_generation_prompt,
+    select_pose_variant,
+)
 from .schemas import (
     GenerationError,
     GenerationErrorResponse,
@@ -41,6 +47,7 @@ settings = get_settings()
 image_service = ImageGenerationService(settings)
 dashboard_store = DashboardStore(settings.dashboard_data_dir, settings.dashboard_timezone)
 photo_service = PhotoService(settings)
+prompt_store = PromptStore(settings.dashboard_data_dir)
 
 
 @asynccontextmanager
@@ -68,7 +75,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.frontend_origin],
     allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["DELETE", "GET", "POST", "PUT", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
 
@@ -96,6 +103,96 @@ def _error_response(
 @app.get("/api/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     return HealthResponse(model=settings.image_model)
+
+
+@app.get("/api/prompts")
+def get_prompts() -> dict[str, Any]:
+    return {"ok": True, **prompt_store.read(), "references": prompt_store.reference_urls()}
+
+
+@app.get("/api/prompts/defaults")
+def get_default_prompts() -> dict[str, Any]:
+    return {"ok": True, **prompt_store.defaults()}
+
+
+@app.put("/api/prompts")
+def save_prompts(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    try:
+        saved = prompt_store.save(payload)
+    except PromptConfigurationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"ok": True, **saved, "references": prompt_store.reference_urls()}
+
+
+@app.post("/api/prompts/reset")
+def reset_prompts() -> dict[str, Any]:
+    return {"ok": True, **prompt_store.reset(), "references": prompt_store.reference_urls()}
+
+
+@app.get("/api/prompts/references/{scenario_id}/{role}")
+def get_prompt_reference(scenario_id: str, role: str) -> FileResponse:
+    try:
+        reference_path = prompt_store.reference_path(scenario_id, role)
+    except PromptConfigurationError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if not reference_path.is_file():
+        raise HTTPException(status_code=404, detail="Reference image not found.")
+    return FileResponse(
+        reference_path,
+        media_type=prompt_store.reference_media_type(reference_path),
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@app.post("/api/prompts/references/{scenario_id}/{role}")
+async def upload_prompt_reference(
+    scenario_id: str,
+    role: str,
+    image: UploadFile = File(...),
+) -> dict[str, Any]:
+    try:
+        prompt_store.validate_reference_key(scenario_id, role)
+    except PromptConfigurationError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    mime_type = (image.content_type or "").lower()
+    if mime_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=415, detail="Reference image must be JPEG, PNG, or WebP.")
+    try:
+        image_bytes = await image.read(settings.max_upload_bytes + 1)
+    finally:
+        await image.close()
+
+    if not image_bytes:
+        raise HTTPException(status_code=400, detail="Reference image is empty.")
+    if len(image_bytes) > settings.max_upload_bytes:
+        raise HTTPException(status_code=413, detail="Reference image is larger than 10 MB.")
+    if detect_raster_mime(image_bytes) != mime_type:
+        raise HTTPException(status_code=400, detail="That file is not a valid image.")
+
+    try:
+        prompt_store.save_reference(scenario_id, role, image_bytes, mime_type)
+    except PromptConfigurationError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {
+        "ok": True,
+        "reference_url": f"/api/prompts/references/{scenario_id}/{role}",
+    }
+
+
+@app.delete("/api/prompts/references/{scenario_id}/{role}")
+def reset_prompt_reference(scenario_id: str, role: str) -> dict[str, Any]:
+    try:
+        prompt_store.reset_reference(scenario_id, role)
+        reference_path = prompt_store.reference_path(scenario_id, role)
+    except PromptConfigurationError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    if not reference_path.is_file():
+        raise HTTPException(status_code=404, detail="Default reference image not found.")
+    return {
+        "ok": True,
+        "reference_url": f"/api/prompts/references/{scenario_id}/{role}",
+    }
 
 
 @app.get("/api/dashboard/overview")
@@ -241,7 +338,14 @@ async def generate(
             details={"mime_type": mime_type},
         )
 
-    generation_prompt = build_image_generation_prompt(people_count, normalized_scenario_id)
+    pose_variant = select_pose_variant(normalized_scenario_id, people_count, request_id)
+    generation_prompt = build_image_generation_prompt(
+        people_count,
+        normalized_scenario_id,
+        request_id,
+        prompt_configuration=prompt_store.read(),
+    )
+    reference_images = prompt_store.load_references(normalized_scenario_id)
     logger.add(
         "info",
         "input_validated",
@@ -261,7 +365,10 @@ async def generate(
             "model": settings.image_model,
             "people_count": people_count,
             "scenario_id": normalized_scenario_id,
-            "aspect_ratio": "3:4",
+            "pose_variant": pose_variant,
+            "aspect_ratio": "9:16",
+            "requested_image_size": "2K",
+            "reference_images": len(reference_images),
             "response_modalities": ["IMAGE"],
         },
     )
@@ -290,6 +397,7 @@ async def generate(
             mime_type=mime_type,
             prompt=generation_prompt,
             request_id=request_id,
+            reference_images=reference_images,
         )
     except ProviderError as exc:
         response = _error_response(
@@ -346,6 +454,8 @@ async def generate(
             "latency_ms": result.latency_ms,
             "output_mime_type": result.mime_type,
             "output_size_bytes": len(result.image_bytes),
+            "native_width": result.width,
+            "native_height": result.height,
         },
     )
     logger.add(

@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import json
 import logging
+from io import BytesIO
 import re
 import secrets
 import threading
@@ -14,6 +15,7 @@ from urllib.parse import urlsplit
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, Response
+from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field
 
 from .photo_store import create_photo_store
@@ -124,11 +126,18 @@ def create_photo_router(service):
             if existing:
                 service.available(token)
                 return service.public_metadata(token, existing)
-            content = image.file.read(service.settings.max_upload_bytes + 1)
-            if len(content) > service.settings.max_upload_bytes:
+            content = image.file.read(service.settings.max_final_photo_bytes + 1)
+            if len(content) > service.settings.max_final_photo_bytes:
                 raise HTTPException(413, "The final photo is too large.")
             if not content or detect_raster_mime(content) != "image/jpeg":
                 raise HTTPException(400, "A final JPEG photo is required.")
+            try:
+                with Image.open(BytesIO(content)) as final_image:
+                    if final_image.format != "JPEG" or final_image.size != (4320, 7680):
+                        raise HTTPException(400, "The final photo must be a 4320×7680 JPEG.")
+                    final_image.load()
+            except (UnidentifiedImageError, OSError):
+                raise HTTPException(400, "The final JPEG photo is corrupt.") from None
             now = int(time.time())
             days = service.settings.photo_retention_days
             metadata = {"request_id": credential["request_id"], "scenario_id": credential["scenario_id"],
