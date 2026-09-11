@@ -94,8 +94,6 @@ class PhotoService:
         metadata = self.store.get(token)
         if not metadata:
             raise HTTPException(404, "Photo not found.")
-        if metadata.get("expires_at") and metadata["expires_at"] <= time.time():
-            raise HTTPException(410, "This photo has expired.")
         return metadata
 
     def public_metadata(self, token, metadata):
@@ -105,11 +103,7 @@ class PhotoService:
             if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.path or parsed.query or parsed.fragment:
                 raise ValueError("PUBLIC_APP_URL must be an HTTP(S) origin without a path.")
         return {"photo_url": f"{origin}/photo/{token}", "token": token,
-                "image_url": f"/api/photos/{token}/image", "expires_at": metadata.get("expires_at"),
-                "scenario_id": metadata["scenario_id"]}
-
-    def cleanup(self):
-        self.store.cleanup()
+                "image_url": f"/api/photos/{token}/image", "scenario_id": metadata["scenario_id"]}
 
 
 def create_photo_router(service):
@@ -133,15 +127,14 @@ def create_photo_router(service):
                 raise HTTPException(400, "A final JPEG photo is required.")
             try:
                 with Image.open(BytesIO(content)) as final_image:
-                    if final_image.format != "JPEG" or final_image.size != (4320, 7680):
-                        raise HTTPException(400, "The final photo must be a 4320×7680 JPEG.")
+                    if final_image.format != "JPEG" or final_image.size != (2160, 4378):
+                        raise HTTPException(400, "The final photo must be a 2160×4378 JPEG.")
                     final_image.load()
             except (UnidentifiedImageError, OSError):
                 raise HTTPException(400, "The final JPEG photo is corrupt.") from None
             now = int(time.time())
-            days = service.settings.photo_retention_days
             metadata = {"request_id": credential["request_id"], "scenario_id": credential["scenario_id"],
-                        "created_at": now, "expires_at": now + days * 86400 if days else None}
+                        "created_at": now}
             saved = service.store.publish(token, metadata, content)
             return service.public_metadata(token, saved)
         except HTTPException:

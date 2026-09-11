@@ -1,18 +1,15 @@
 from __future__ import annotations
 
 import base64
+import logging
 from pathlib import Path
 import time
 import uuid
-import asyncio
-import logging
-from contextlib import asynccontextmanager, suppress
 from typing import Any
 
 from fastapi import Body, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
-from starlette.concurrency import run_in_threadpool
 
 from .config import get_settings
 from .dashboard_store import DashboardStore
@@ -50,25 +47,7 @@ photo_service = PhotoService(settings)
 prompt_store = PromptStore(settings.dashboard_data_dir)
 
 
-@asynccontextmanager
-async def lifespan(_app):
-    async def cleanup_photos():
-        while True:
-            try:
-                await run_in_threadpool(photo_service.cleanup)
-            except Exception:
-                logging.getLogger(__name__).exception("QR photo cleanup failed")
-            await asyncio.sleep(3600)
-    task = asyncio.create_task(cleanup_photos())
-    try:
-        yield
-    finally:
-        task.cancel()
-        with suppress(asyncio.CancelledError):
-            await task
-
-
-app = FastAPI(title="Century Ply AI Photobooth API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Century Ply AI Photobooth API", version="0.1.0")
 app.include_router(create_photo_router(photo_service))
 
 app.add_middleware(

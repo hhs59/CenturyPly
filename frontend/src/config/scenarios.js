@@ -5,7 +5,7 @@ export const SCENARIOS = [
     shortDescription: "Northern court elegance among ancient citadel walls",
     regionLabel: "Northern Vietnam",
     accent: "#b34a3f",
-    previewImage: "/concepts/thang-long-imperial-scene.jpg",
+    previewImage: "/concepts/thang-long-imperial-scene.webp",
   },
   {
     id: "hoa_lu_capital",
@@ -13,7 +13,7 @@ export const SCENARIOS = [
     shortDescription: "Ceremonial heritage styling in Vietnam's first imperial capital",
     regionLabel: "Northern Vietnam",
     accent: "#9f613d",
-    previewImage: "/concepts/hoa-lu-capital-scene.jpg",
+    previewImage: "/concepts/hoa-lu-capital-scene.webp",
   },
   {
     id: "hue_imperial_city",
@@ -21,7 +21,7 @@ export const SCENARIOS = [
     shortDescription: "Graceful royal portraits in the heart of the Đại Nội",
     regionLabel: "Central Vietnam",
     accent: "#a65b43",
-    previewImage: "/concepts/hue-imperial-city-scene.jpg",
+    previewImage: "/concepts/hue-imperial-city-scene.webp",
   },
   {
     id: "thai_hoa_palace",
@@ -29,7 +29,7 @@ export const SCENARIOS = [
     shortDescription: "Ceremonial Nguyễn-era grandeur with a warm imperial glow",
     regionLabel: "Central Vietnam",
     accent: "#c08a42",
-    previewImage: "/concepts/thai-hoa-palace-scene.jpg",
+    previewImage: "/concepts/thai-hoa-palace-scene.webp",
   },
   {
     id: "an_dinh_palace",
@@ -37,7 +37,7 @@ export const SCENARIOS = [
     shortDescription: "A refined palace portrait inspired by Huế's royal residence",
     regionLabel: "Central Vietnam",
     accent: "#b77452",
-    previewImage: "/concepts/an-dinh-palace-scene.jpg",
+    previewImage: "/concepts/an-dinh-palace-scene.webp",
   },
   {
     id: "independence_palace",
@@ -45,7 +45,7 @@ export const SCENARIOS = [
     shortDescription: "Southern heritage elegance against a landmark palace setting",
     regionLabel: "Southern Vietnam",
     accent: "#b45b39",
-    previewImage: "/concepts/independence-palace-scene.jpg",
+    previewImage: "/concepts/independence-palace-scene.webp",
   },
   {
     id: "gia_long_palace",
@@ -53,7 +53,7 @@ export const SCENARIOS = [
     shortDescription: "A dignified southern palace portrait with timeless character",
     regionLabel: "Southern Vietnam",
     accent: "#8f4d39",
-    previewImage: "/concepts/gia-long-palace-scene.jpg",
+    previewImage: "/concepts/gia-long-palace-scene.webp",
   },
 ];
 

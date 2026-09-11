@@ -5,7 +5,6 @@ import json
 import hashlib
 import sqlite3
 import threading
-import time
 from pathlib import Path
 
 
@@ -52,18 +51,6 @@ class LocalPhotoStore:
         with self.lock:
             rows = self.db.execute("SELECT metadata, downloads FROM photos").fetchall()
         return {json.loads(row[0])["request_id"]: row[1] for row in rows}
-
-    def cleanup(self):
-        with self.lock:
-            rows = self.db.execute("SELECT token, metadata FROM photos").fetchall()
-            for token, raw in rows:
-                metadata = json.loads(raw)
-                if metadata.get("expires_at") and metadata["expires_at"] <= time.time():
-                    (self.directory / f"{token}.jpg").unlink(missing_ok=True)
-                    # Retain the count and expiry tombstone, discard click deduplication data.
-                    with self.db:
-                        self.db.execute("DELETE FROM downloads WHERE token=?", (token,))
-
 
 class FirebasePhotoStore:
     def __init__(self, settings):
@@ -133,24 +120,6 @@ class FirebasePhotoStore:
     def counts(self):
         return {row.get("request_id"): row.get("download_count")
                 for row in self.collection.select(["request_id", "download_count"]).stream(timeout=15)}
-
-    def cleanup(self):
-        from google.api_core.exceptions import NotFound
-        from google.cloud.firestore_v1.base_query import FieldFilter
-
-        query = self.collection.where(filter=FieldFilter("expires_at", "<=", time.time()))
-        for snapshot in query.stream(timeout=30):
-            metadata = snapshot.to_dict()
-            if not metadata.get("expires_at") or metadata.get("purged"):
-                continue
-            try:
-                self.blob(snapshot.id).delete(timeout=15)
-            except NotFound:
-                pass
-            for event in snapshot.reference.collection("downloads").stream(timeout=15):
-                event.reference.delete(timeout=15)
-            snapshot.reference.update({"purged": True}, timeout=15)
-
 
 def create_photo_store(settings):
     if settings.photo_storage_provider == "firebase":

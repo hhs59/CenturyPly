@@ -33,7 +33,13 @@ function ScenarioStep({ scenarioId, error, onScenarioChange, onContinue }) {
                 type="button"
               >
                 <span className="scenario-art" aria-hidden="true">
-                  <img src={scenario.previewImage} alt="" onError={handlePreviewError} />
+                  <img
+                    src={scenario.previewImage}
+                    alt=""
+                    decoding="async"
+                    loading="lazy"
+                    onError={handlePreviewError}
+                  />
                   <span className="scenario-art-fallback">Preview coming soon</span>
                 </span>
                 <span className="scenario-copy">

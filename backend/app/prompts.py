@@ -234,14 +234,14 @@ SCENARIO_CONFIGS = {
             "DẤU HIỆU NHẬN DIỆN BẮT BUỘC:",
             "Trong khung hình dọc phải thấy rõ nhịp lam bê tông đứng, ban công giữa, đài phun nước tròn và thảm cỏ. Cho phép cắt đối xứng phần ngoài cùng của hai cánh nhà để phù hợp tỷ lệ 9:16, nhưng phải giữ trục chính diện và đủ dấu hiệu để nhận ra ngay Dinh Độc Lập, không phải văn phòng hiện đại bất kỳ.",
             "BỐ CỤC KHÔNG GIAN:",
-            "Đặt nhóm khách trên thảm cỏ hoặc lối trước đài phun, hơi lệch khỏi trục giữa để không che vòi phun và ban công. Phần trung tâm cùng nhịp lam đặc trưng nằm rõ ở nửa trên hậu cảnh và vẫn đủ nét; chỉ tách nền nhẹ.",
+            "Đặt toàn bộ khách trên lối đi lát đá hoặc khu vực sân cứng dành cho khách tham quan phía trước Dinh Độc Lập. Thảm cỏ xanh và đài phun nước nằm hoàn toàn phía sau nhóm khách như một phần của hậu cảnh. Bàn chân của mọi khách tiếp xúc rõ ràng với mặt đường lát đá; không đặt hoặc cho khách bước trên thảm cỏ. Nhóm hơi lệch khỏi trục giữa để không che vòi phun và ban công. Phần trung tâm cùng nhịp lam đặc trưng nằm rõ ở nửa trên hậu cảnh và vẫn đủ nét; chỉ tách nền nhẹ.",
             "ÁNH SÁNG VÀ MÀU SẮC:",
             "Ánh sáng ban ngày miền Nam sáng, mềm và sạch, tương phản vừa phải. Da người tự nhiên; kiến trúc trắng/xám, cỏ xanh, trang phục tím hoặc ngà là điểm màu chính. Không dùng đèn rọi tím/vàng giả hoặc hiệu ứng tương phản động quá mức.",
             "KHÔNG ĐƯỢC XUẤT HIỆN:",
             "Không có mặt tiền thuộc địa với cột/vòm của Dinh Gia Long, mặt tiền vàng Cung An Định, mái cung đình Nguyễn, cột rồng, đền chùa, ngai vàng, lâu đài châu Âu, chữ/biển hiệu, giao thông hoặc người đi ngang.",
         ),
         "male_clothing": _clothing(
-            "Khách nam mặc áo dài nghi lễ Việt Nam màu ngà, tinh thần hiện đại và trang trọng. Thân áo dài qua gối, phom thẳng không bó, cổ đứng kín, hàng khuy trước thân; tay áo dài gọn và rủ. Vải lụa/gấm mờ, thêu vàng và trắng ngà tiết chế ở cổ, ngực, tay và dọc tà; quần dài, giày kín mũi và phụ kiện đầu đúng mẫu nếu có. Khi đứng vai mở hoặc bước trên cỏ, tà áo rơi tự nhiên và không che bàn chân.",
+            "Khách nam mặc áo dài nghi lễ Việt Nam màu ngà, tinh thần hiện đại và trang trọng. Thân áo dài qua gối, phom thẳng không bó, cổ đứng kín, hàng khuy trước thân; tay áo dài gọn và rủ. Vải lụa/gấm mờ, thêu vàng và trắng ngà tiết chế ở cổ, ngực, tay và dọc tà; quần dài, giày kín mũi và phụ kiện đầu đúng mẫu nếu có. Khi đứng vai mở hoặc bước trên lối lát đá, tà áo rơi tự nhiên và không che bàn chân.",
             "ẢNH 2",
         ),
         "female_clothing": _clothing(
@@ -251,7 +251,7 @@ SCENARIO_CONFIGS = {
         "pose_expression": _pose_variants(
             ("ĐỨNG TRÊN TRỤC MẶT TIỀN", "ĐÓN KHÁCH TRÊN LỐI TIẾP CẬN", "HÒA NHẬP VÀO DI SẢN HIỆN ĐẠI"),
             (
-                ("đứng giữa hoặc hơi lệch trục, vai mở và một chân tự nhiên.", "đứng thành cặp cân bằng với khoảng hở nhỏ, vai và tay khác nhau.", "tạo vòng cung nông trên cỏ, giữa tiến nhẹ và hai bên xoay vào trục.", "tạo vòng cung nông hoặc hai trung tâm/hai bên trước mặt tiền."),
+                ("đứng giữa hoặc hơi lệch trục trên lối lát đá, vai mở và một chân tự nhiên.", "đứng thành cặp cân bằng trên lối lát đá với khoảng hở nhỏ, vai và tay khác nhau.", "tạo vòng cung nông trên lối lát đá, giữa tiến nhẹ và hai bên xoay vào trục.", "tạo vòng cung nông hoặc hai trung tâm/hai bên trên lối lát đá trước mặt tiền."),
                 ("bước nhẹ trên trục lối vào, vai mở và tay thả tự nhiên.", "hai khách bước cùng hướng, một người dẫn và người kia xoay về bạn đồng hành.", "ba khách xếp cung nông theo lối vào, giữa tiến rất ít.", "bốn khách tiến nhẹ trong cung nông, hai người ngoài lùi ít, không hàng sâu."),
                 ("đứng ba phần tư để vừa thấy mặt tiền vừa giữ dáng tự nhiên.", "đứng cạnh nhau, vai mở, hướng nhìn hơi khác, không chạm vai.", "tạo tam giác nông, giữa hướng máy ảnh và hai bên hướng nhẹ ra ngoài.", "tạo hai trung tâm/hai bên với khoảng cách rõ giữa bốn đầu."),
             ),

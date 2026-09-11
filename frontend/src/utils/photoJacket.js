@@ -1,5 +1,5 @@
-const OUTPUT_WIDTH = 4320;
-const PORTRAIT_HEIGHT = 7680;
+const OUTPUT_WIDTH = 2160;
+const PORTRAIT_HEIGHT = 3840;
 const FOOTER_HEIGHT = Math.round(PORTRAIT_HEIGHT * 0.14);
 const OUTPUT_HEIGHT = PORTRAIT_HEIGHT + FOOTER_HEIGHT;
 const JACKET_FONT = '"Cormorant Garamond", Georgia, "Times New Roman", serif';
@@ -19,7 +19,7 @@ function canvasToBlob(canvas) {
     canvas.toBlob((blob) => {
       if (blob?.size) resolve(blob);
       else reject(new Error("The branded portrait could not be created."));
-    }, "image/jpeg", 0.92);
+    }, "image/jpeg", 0.9);
   });
 }
 
@@ -38,7 +38,7 @@ function drawPortrait(context, image) {
 export async function createPhotoJacket(imageBlob, scenarioName = "Vietnam Imperial Legacy") {
   if (!imageBlob?.size) throw new Error("The generated portrait is not available.");
 
-  await document.fonts.load('600 180px "Cormorant Garamond"');
+  await document.fonts.load('600 90px "Cormorant Garamond"');
   const image = await createImageBitmap(imageBlob);
   const canvas = document.createElement("canvas");
   canvas.width = OUTPUT_WIDTH;
@@ -63,31 +63,31 @@ export async function createPhotoJacket(imageBlob, scenarioName = "Vietnam Imper
   context.fillRect(0, footerTop, OUTPUT_WIDTH, FOOTER_HEIGHT);
 
   context.fillStyle = "rgba(255, 243, 193, 0.38)";
-  context.fillRect(0, footerTop, OUTPUT_WIDTH, 18);
+  context.fillRect(0, footerTop, OUTPUT_WIDTH, 9);
   context.strokeStyle = "rgba(83, 42, 17, 0.55)";
-  context.lineWidth = 10;
-  context.strokeRect(26, 26, OUTPUT_WIDTH - 52, OUTPUT_HEIGHT - 52);
+  context.lineWidth = 5;
+  context.strokeRect(13, 13, OUTPUT_WIDTH - 26, OUTPUT_HEIGHT - 26);
 
   const dividerX = Math.round(OUTPUT_WIDTH * 0.42);
   const footerCenter = footerTop + (FOOTER_HEIGHT / 2);
   context.strokeStyle = "rgba(94, 48, 18, 0.62)";
-  context.lineWidth = 9;
+  context.lineWidth = 5;
   context.beginPath();
-  context.moveTo(dividerX, footerTop + 190);
-  context.lineTo(dividerX, OUTPUT_HEIGHT - 190);
+  context.moveTo(dividerX, footerTop + 95);
+  context.lineTo(dividerX, OUTPUT_HEIGHT - 95);
   context.stroke();
 
   context.fillStyle = "#4c2515";
   context.textAlign = "center";
   context.textBaseline = "middle";
   const brand = "CENTURY PLY";
-  const brandSize = fitText(context, brand, dividerX - 260, 190, 100);
+  const brandSize = fitText(context, brand, dividerX - 130, 95, 50);
   context.font = `600 ${brandSize}px ${JACKET_FONT}`;
   context.fillText(brand, dividerX / 2, footerCenter);
 
   const title = String(scenarioName).toUpperCase();
-  const titleWidth = OUTPUT_WIDTH - dividerX - 260;
-  const titleSize = fitText(context, title, titleWidth, 175, 78);
+  const titleWidth = OUTPUT_WIDTH - dividerX - 130;
+  const titleSize = fitText(context, title, titleWidth, 88, 39);
   context.font = `600 ${titleSize}px ${JACKET_FONT}`;
   context.fillText(title, dividerX + ((OUTPUT_WIDTH - dividerX) / 2), footerCenter);
 
@@ -97,5 +97,5 @@ export async function createPhotoJacket(imageBlob, scenarioName = "Vietnam Imper
 export const PHOTO_OUTPUT = Object.freeze({
   width: OUTPUT_WIDTH,
   height: OUTPUT_HEIGHT,
-  aspectRatio: "4320:8755",
+  aspectRatio: "2160:4378",
 });

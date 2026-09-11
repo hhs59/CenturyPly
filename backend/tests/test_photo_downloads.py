@@ -23,7 +23,7 @@ from backend.app.config import Settings
 from backend.app.photo_api import PhotoService, create_photo_router
 from backend.app.photo_store import FirebasePhotoStore
 
-def jpeg_fixture(size=(4320, 7680)):
+def jpeg_fixture(size=(2160, 4378)):
     output = BytesIO()
     with Image.new("RGB", size, "white") as image:
         image.save(output, "JPEG", quality=1)
@@ -31,6 +31,7 @@ def jpeg_fixture(size=(4320, 7680)):
 
 
 JPEG = jpeg_fixture()
+GENERATED_JPEG = jpeg_fixture((4320, 7680))
 WRONG_SIZE_JPEG = jpeg_fixture((768, 1365))
 FORGED_JPEG = b"\xff\xd8\xff\xc0\x00\x11\x08\x1e\x00\x10\xe0\x03\x01\x11\x00\x02\x11\x00\x03\x11\x00\xff\xd9"
 
@@ -171,18 +172,6 @@ class PhotoContract:
         with patch("backend.app.photo_api.time.time", return_value=time.time() + 86401):
             self.assertEqual(self.publish().status_code, 403)
 
-    def test_expiry_blocks_preview_download_and_republish_then_removes_image(self):
-        self.settings.photo_retention_days = 1
-        token = self.publish().json()["token"]
-        with patch("time.time", return_value=time.time() + 86401):
-            for path in (f"/api/photos/{token}", f"/api/photos/{token}/image"):
-                self.assertEqual(self.client.get(path).status_code, 410)
-            self.assertEqual(self.client.post(f"/api/photos/{token}/download", json={"event_id": "download-press-00001"}).status_code, 410)
-            self.service.cleanup()
-        with self.assertRaises(FileNotFoundError):
-            self.service.store.read(token)
-        self.assertEqual(self.service.store.counts()["test-generation"], 0)
-
     def test_invalid_images_unknown_tokens_and_upload_limits(self):
         self.assertEqual(self.publish(content=b"not an image").status_code, 400)
         self.assertEqual(self.publish(content=FORGED_JPEG).status_code, 400)
@@ -199,13 +188,6 @@ class PhotoContract:
             with self.assertLogs("backend.app.photo_api", level="ERROR"):
                 self.assertEqual(self.publish().status_code, 503)
         self.assertEqual(self.publish().status_code, 200)
-
-    def test_zero_retention_keeps_photos(self):
-        token = self.publish().json()["token"]
-        with patch("time.time", return_value=time.time() + 86400 * 365):
-            self.service.cleanup()
-            self.assertEqual(self.client.get(f"/api/photos/{token}/image").content, JPEG)
-
 
 class LocalPhotoTests(PhotoContract, unittest.TestCase):
     firebase = False
@@ -239,7 +221,7 @@ class FirebasePhotoTests(PhotoContract, unittest.TestCase):
     def test_import_preserves_download_counts_and_never_overwrites_them(self):
         token = self.service.verify_ticket(self.ticket)["token"]
         metadata = {"request_id": "migrated-request", "scenario_id": "thang-long-imperial",
-                    "created_at": int(time.time()), "expires_at": None, "download_count": 5}
+                    "created_at": int(time.time()), "download_count": 5}
         self.service.store.publish(token, metadata, JPEG)
         self.service.store.record_download(token, "download-after-migration")
         self.service.store.publish(token, metadata, JPEG)
@@ -276,7 +258,7 @@ class GenerationQrIntegrationTests(unittest.TestCase):
 
     def test_generation_publish_phone_download_and_dashboard(self):
         from backend.app.services.image_generation import ProviderImageResult
-        result = ProviderImageResult(JPEG, "image/jpeg", 4320, 7680, 1, 200)
+        result = ProviderImageResult(GENERATED_JPEG, "image/jpeg", 4320, 7680, 1, 200)
         with TestClient(self.main.app) as client, patch.object(self.main.image_service, "generate_image", new=AsyncMock(return_value=result)):
             generated = client.post("/api/generate", data={"people_count": 4, "scenario_id": next(iter(self.main.SCENARIO_IDS))},
                                     files={"image": ("input.jpg", JPEG, "image/jpeg")})
@@ -296,7 +278,7 @@ class GenerationQrIntegrationTests(unittest.TestCase):
 
     def test_qr_configuration_failure_does_not_lose_generated_portrait(self):
         from backend.app.services.image_generation import ProviderImageResult
-        result = ProviderImageResult(JPEG, "image/jpeg", 4320, 7680, 1, 200)
+        result = ProviderImageResult(GENERATED_JPEG, "image/jpeg", 4320, 7680, 1, 200)
         with TestClient(self.main.app) as client, patch.object(self.main.image_service, "generate_image", new=AsyncMock(return_value=result)), patch.object(self.main.photo_service, "issue_ticket", side_effect=ValueError("missing config")):
             with self.assertLogs("backend.app.main", level="ERROR"):
                 response = client.post("/api/generate", data={"people_count": 1, "scenario_id": next(iter(self.main.SCENARIO_IDS))},

@@ -47,6 +47,7 @@ function PeopleCountStep({
             return (
               <button
                 aria-checked={selected}
+                aria-label={`${count} ${count === 1 ? "person" : "people"}`}
                 className={`people-count-option${selected ? " people-count-option-selected" : ""}`}
                 key={count}
                 onClick={() => onPeopleCountChange(count)}
@@ -54,7 +55,6 @@ function PeopleCountStep({
                 type="button"
               >
                 <strong>{count}</strong>
-                <span>{count === 1 ? "person" : "people"}</span>
               </button>
             );
           })}

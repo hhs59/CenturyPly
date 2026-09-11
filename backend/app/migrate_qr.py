@@ -3,7 +3,6 @@ import argparse
 import json
 import re
 import sqlite3
-import time
 from pathlib import Path
 
 from .config import get_settings
@@ -20,16 +19,19 @@ def main():
         rows = database.execute("SELECT token, metadata, downloads FROM photos").fetchall()
     eligible = []
     for token, raw, count in rows:
-        metadata = json.loads(raw)
-        if metadata.get("expires_at") and metadata["expires_at"] <= time.time():
-            continue
+        source_metadata = json.loads(raw)
+        metadata = {
+            "request_id": source_metadata["request_id"],
+            "scenario_id": source_metadata["scenario_id"],
+            "created_at": source_metadata["created_at"],
+        }
         if not re.fullmatch(r"[A-Za-z0-9_-]{32}", token):
             raise ValueError("Invalid source token; no files copied.")
         image = directory / f"{token}.jpg"
         if not image.is_file():
             raise FileNotFoundError(f"Missing source image for {token}; no files copied.")
         eligible.append((token, {**metadata, "download_count": count}, image))
-    print(f"{len(eligible)} live QR photos available to copy; {len(rows) - len(eligible)} expired records skipped.")
+    print(f"{len(eligible)} QR photos available to copy.")
     if not args.apply:
         print("Dry run only. Add --apply to copy into the configured Firebase project.")
         return

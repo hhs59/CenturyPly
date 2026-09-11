@@ -15,6 +15,9 @@ import { createAppError } from "./utils/logging.js";
 import { createPhotoJacket } from "./utils/photoJacket.js";
 
 const CAMERA_STEPS = new Set(["camera_loading", "aligning", "countdown", "capture_check", "camera_error", "photo_ready"]);
+const INACTIVITY_PAUSED_STEPS = new Set(["generating", "countdown", "capture_check"]);
+const INACTIVITY_RESET_MS = 60_000;
+const PRESENCE_ACTIVITY_INTERVAL_MS = 5_000;
 
 function createInitialState() {
   return {
@@ -42,8 +45,12 @@ function PhotoboothApp() {
   const [state, setState] = useState(createInitialState);
   const resultUrlRef = useRef("");
   const generationInFlightRef = useRef(false);
+  const inactivityPausedRef = useRef(false);
+  const inactivityTimerRef = useRef(0);
+  const lastPresenceActivityRef = useRef(0);
   const appHeadingRef = useRef(null);
   const previousStepRef = useRef(state.step);
+  const [isQrPreparing, setIsQrPreparing] = useState(false);
   const faceDetection = useFaceDetection();
 
   const revokeResultUrl = useCallback(() => {
@@ -52,6 +59,27 @@ function PhotoboothApp() {
       resultUrlRef.current = "";
     }
   }, []);
+
+  const resetExperience = useCallback(() => {
+    revokeResultUrl();
+    setIsQrPreparing(false);
+    setState(createInitialState());
+  }, [revokeResultUrl]);
+
+  const restartInactivityTimer = useCallback(() => {
+    window.clearTimeout(inactivityTimerRef.current);
+    inactivityTimerRef.current = 0;
+    if (!inactivityPausedRef.current) {
+      inactivityTimerRef.current = window.setTimeout(resetExperience, INACTIVITY_RESET_MS);
+    }
+  }, [resetExperience]);
+
+  const handleCameraPresence = useCallback(() => {
+    const now = Date.now();
+    if (now - lastPresenceActivityRef.current < PRESENCE_ACTIVITY_INTERVAL_MS) return;
+    lastPresenceActivityRef.current = now;
+    restartInactivityTimer();
+  }, [restartInactivityTimer]);
 
   useEffect(() => {
     if (previousStepRef.current !== state.step) {
@@ -63,6 +91,27 @@ function PhotoboothApp() {
   }, [state.step]);
 
   useEffect(() => () => revokeResultUrl(), [revokeResultUrl]);
+
+  useEffect(() => {
+    window.addEventListener("pointerdown", restartInactivityTimer, { passive: true });
+    window.addEventListener("keydown", restartInactivityTimer);
+    return () => {
+      window.clearTimeout(inactivityTimerRef.current);
+      window.removeEventListener("pointerdown", restartInactivityTimer);
+      window.removeEventListener("keydown", restartInactivityTimer);
+    };
+  }, [restartInactivityTimer]);
+
+  useEffect(() => {
+    inactivityPausedRef.current = INACTIVITY_PAUSED_STEPS.has(state.step) || isQrPreparing;
+    restartInactivityTimer();
+  }, [isQrPreparing, restartInactivityTimer, state.step]);
+
+  useEffect(() => {
+    if (state.step === "people" && state.peopleCount) {
+      void faceDetection.ensureReady().catch(() => {});
+    }
+  }, [faceDetection.ensureReady, state.peopleCount, state.step]);
 
   const startGeneration = useCallback(async ({
     file = state.photoFile,
@@ -212,8 +261,7 @@ function PhotoboothApp() {
   }
 
   function handleStartOver() {
-    revokeResultUrl();
-    setState(createInitialState());
+    resetExperience();
   }
 
   function handleChangePhoto() {
@@ -238,6 +286,7 @@ function PhotoboothApp() {
           isPhotoReady={state.step === "photo_ready"}
           onCancel={handleCameraCancel}
           onCaptured={handleCaptured}
+          onGuestPresence={handleCameraPresence}
           onPhaseChange={handleCameraPhaseChange}
           onProceed={handlePhotoProceed}
           onRetake={handleCameraRetake}
@@ -259,6 +308,7 @@ function PhotoboothApp() {
       return (
         <ResultView
           displayUrl={state.resultUrl}
+          onQrPreparingChange={setIsQrPreparing}
           onStartOver={handleStartOver}
           resultBlob={state.resultBlob}
           publishTicket={state.photoPublishTicket}

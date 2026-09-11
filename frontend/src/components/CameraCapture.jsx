@@ -28,6 +28,7 @@ function CameraCapture({
   isPhotoReady,
   onCancel,
   onCaptured,
+  onGuestPresence,
   onPhaseChange,
   onProceed,
   onRetake,
@@ -205,6 +206,7 @@ function CameraCapture({
 
     const captureCandidates = getCaptureCandidates(result.faces, frameWidth, frameHeight);
     const foregroundFaces = getDominantForegroundFaces(captureCandidates, frameWidth, frameHeight);
+    if (foregroundFaces.length > 0) onGuestPresence();
     const primaryFaces = selectPrimaryFaces(foregroundFaces, peopleCount, frameWidth, frameHeight);
     const isCountdown = trackerRef.current.phase === "countdown";
     let detectedCount = foregroundFaces.length;
@@ -250,7 +252,7 @@ function CameraCapture({
     if (transition.state.phase !== phaseRef.current) {
       setCameraPhase(transition.state.phase);
     }
-  }, [capturePhoto, peopleCount, setCameraPhase]);
+  }, [capturePhoto, onGuestPresence, peopleCount, setCameraPhase]);
 
   useEffect(() => {
     let cancelled = false;
@@ -369,6 +371,7 @@ function CameraCapture({
   }
 
   async function handleBackToCamera() {
+    const wasUpload = inputMode === "upload";
     captureTokenRef.current += 1;
     captureInProgressRef.current = false;
     if (photoPreviewUrlRef.current) {
@@ -378,23 +381,19 @@ function CameraCapture({
     setCountdownValue(null);
     setCaptureError(null);
     onRetake();
+    setInputMode("camera");
     setCameraPhase("camera_loading");
 
-    if (inputMode === "upload") {
-      setCameraPhase("aligning");
-      window.requestAnimationFrame(() => uploadRef.current?.click());
-      return;
-    }
+    // Switching from upload mode reruns the camera initialization effect.
+    // A captured camera photo is already in camera mode, so restart its stopped
+    // stream explicitly instead of waiting for an unchanged dependency.
+    if (wasUpload) return;
 
     try {
       const cameraResult = await startCamera(videoRef.current);
-      if (!mountedRef.current) {
-        return;
-      }
+      if (!mountedRef.current) return;
       if (!cameraResult.ok) {
-        if (cameraResult.error) {
-          reportError(cameraResult.error);
-        }
+        if (cameraResult.error) reportError(cameraResult.error);
         return;
       }
       resetAlignment();
@@ -534,7 +533,7 @@ function CameraCapture({
       {isPhotoReady ? (
         <div className="photo-review-actions">
           <button className="secondary-button" type="button" onClick={handleBackToCamera}>
-            <RotateCcw size={17} aria-hidden="true" /> {inputMode === "upload" ? "Choose another" : "Back"}
+            <RotateCcw size={17} aria-hidden="true" /> Back
           </button>
           <button className="primary-button" type="button" onClick={onProceed}>
             Continue <ArrowRight size={19} aria-hidden="true" />
@@ -543,10 +542,10 @@ function CameraCapture({
       ) : inputMode === "upload" ? (
         <div className="camera-actions">
           <button className="secondary-button" type="button" onClick={useCameraInstead} disabled={phase === "capture_check"}>
-            <Camera size={18} aria-hidden="true" /> Use camera instead
+            <Camera size={18} aria-hidden="true" /> {visibleError ? "Back" : "Use camera instead"}
           </button>
           <button className="primary-button" type="button" onClick={openUpload} disabled={phase === "capture_check"}>
-            <Upload size={18} aria-hidden="true" /> Choose photo
+            <Upload size={18} aria-hidden="true" /> Upload photo
           </button>
         </div>
       ) : visibleError ? (

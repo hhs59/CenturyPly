@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { publishPhoto } from "../services/photoApi.js";
 
-export default function PhotoQr({ blob, ticket }) {
+export default function PhotoQr({ blob, ticket, onPreparingChange }) {
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState({ status: "loading" });
 
@@ -11,22 +11,29 @@ export default function PhotoQr({ blob, ticket }) {
     const timer = setTimeout(() => controller.abort(), 60000);
     let active = true;
     setState({ status: "loading" });
+    onPreparingChange(true);
     async function publish() {
       try {
         if (!ticket) throw new Error("QR publishing is unavailable.");
         const photo = await publishPhoto(blob, ticket, controller.signal);
         const url = new URL(photo.photo_url, window.location.origin).href;
         const image = await QRCode.toDataURL(url, { width: 560, margin: 4, errorCorrectionLevel: "M" });
-        if (active) setState({ status: "ready", url, image });
+        if (active) {
+          setState({ status: "ready", url, image });
+          onPreparingChange(false);
+        }
       } catch {
-        if (active) setState({ status: "error" });
+        if (active) {
+          setState({ status: "error" });
+          onPreparingChange(false);
+        }
       } finally {
         clearTimeout(timer);
       }
     }
     void publish();
-    return () => { active = false; clearTimeout(timer); controller.abort(); };
-  }, [blob, ticket, attempt]);
+    return () => { active = false; clearTimeout(timer); controller.abort(); onPreparingChange(false); };
+  }, [blob, ticket, attempt, onPreparingChange]);
 
   return (
     <aside className="photo-qr" aria-label="Download on your phone" aria-live="polite">

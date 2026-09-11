@@ -1,5 +1,14 @@
+import { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import ErrorAlert from "./ErrorAlert.jsx";
+
+const GENERATION_MESSAGES = [
+  "Preparing your portrait…",
+  "Preserving every guest’s features…",
+  "Styling the traditional outfits…",
+  "Building your selected setting…",
+  "Finishing the final details…",
+];
 
 function PortraitSpinner() {
   return (
@@ -14,6 +23,22 @@ function PortraitSpinner() {
 }
 
 function GeneratingView({ isGenerating, error, onRetry, onChangePhoto }) {
+  const [messageIndex, setMessageIndex] = useState(0);
+
+  useEffect(() => {
+    if (!isGenerating) {
+      setMessageIndex(0);
+      return undefined;
+    }
+
+    setMessageIndex(0);
+    const timer = window.setInterval(() => {
+      setMessageIndex((current) => Math.min(current + 1, GENERATION_MESSAGES.length - 1));
+    }, 8000);
+
+    return () => window.clearInterval(timer);
+  }, [isGenerating]);
+
   return (
     <section className="content-card generation-card" aria-labelledby="generation-heading" aria-busy={isGenerating}>
       <div className="card-heading">
@@ -21,9 +46,12 @@ function GeneratingView({ isGenerating, error, onRetry, onChangePhoto }) {
       </div>
 
       {isGenerating ? (
-        <div className="generation-status" role="status" aria-live="polite" aria-label="Creating your portrait">
+        <div className="generation-status" role="status" aria-live="polite">
           <PortraitSpinner />
-          <p className="generation-message">This may take a moment.</p>
+          <div className="generation-copy">
+            <p className="generation-message" key={messageIndex}>{GENERATION_MESSAGES[messageIndex]}</p>
+            <p className="generation-note">This may take a moment.</p>
+          </div>
         </div>
       ) : (
         <>

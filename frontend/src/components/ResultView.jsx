@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Download, RotateCcw } from "lucide-react";
 import PhotoQr from "./PhotoQr.jsx";
 
-function ResultView({ scenarioName, displayUrl, resultBlob, publishTicket, onStartOver }) {
+function ResultView({ scenarioName, displayUrl, resultBlob, publishTicket, onStartOver, onQrPreparingChange }) {
   const [showQr, setShowQr] = useState(false);
 
   return (
@@ -20,7 +20,7 @@ function ResultView({ scenarioName, displayUrl, resultBlob, publishTicket, onSta
         )}
 
         {resultBlob && showQr && (
-          <PhotoQr blob={resultBlob} ticket={publishTicket} />
+          <PhotoQr blob={resultBlob} ticket={publishTicket} onPreparingChange={onQrPreparingChange} />
         )}
       </div>
 

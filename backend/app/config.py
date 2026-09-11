@@ -2,8 +2,6 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,7 +20,6 @@ class Settings(BaseSettings):
     dashboard_timezone: str = "Asia/Ho_Chi_Minh"
     photo_storage_provider: Literal["local", "firebase"] = "local"
     public_app_url: str = ""
-    photo_retention_days: int = Field(default=0, ge=0)
     photo_signing_secret: str = ""
     firebase_project_id: str = ""
     firebase_storage_bucket: str = ""
