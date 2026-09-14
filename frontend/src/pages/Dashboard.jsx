@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
-  ArrowLeft,
   BarChart3,
   Camera,
   CheckCircle2,
@@ -427,7 +426,6 @@ export default function Dashboard() {
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [health, setHealth] = useState(null);
   const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState("");
   const [scenarioFilter, setScenarioFilter] = useState("");
@@ -470,18 +468,9 @@ export default function Dashboard() {
     }
   }, [page, scenarioFilter, search, statusFilter]);
 
-  const loadHealth = useCallback(async () => {
-    try {
-      setHealth(await fetchJson("/api/health"));
-    } catch {
-      setHealth(null);
-    }
-  }, []);
-
   useEffect(() => {
     void loadOverview();
-    void loadHealth();
-  }, [loadHealth, loadOverview]);
+  }, [loadOverview]);
 
   useEffect(() => {
     void loadSessions();
@@ -527,7 +516,6 @@ export default function Dashboard() {
     setError("");
     setNotice("");
     void loadOverview();
-    void loadHealth();
     void loadSessions();
   };
 
@@ -571,8 +559,6 @@ export default function Dashboard() {
   };
 
   const overviewValue = (key, fallback = 0) => loadingOverview ? "…" : (overview?.[key] ?? fallback);
-  const modelLabel = health?.model ? health.model.split("/").pop() : "service unavailable";
-
   return (
     <div className="dashboard-page">
       <div className="dashboard-background-glow" aria-hidden="true" />
@@ -580,10 +566,9 @@ export default function Dashboard() {
         <header className="dashboard-header">
           <div className="dashboard-title-block">
             <div className="dashboard-title-row"><span className="dashboard-title-accent" /><div><p className="dashboard-eyebrow">Century Ply · admin workspace</p><h1>AI Photobooth Dashboard</h1></div></div>
-            <p className="dashboard-subtitle">Monitor portrait generation, customer activity, and the health of the image service.</p>
+            <p className="dashboard-subtitle">Track portrait activity, performance, and guest downloads.</p>
           </div>
           <div className="dashboard-header-actions">
-            <span className={`dashboard-service-state ${health ? "dashboard-service-online" : ""}`}><span />{health ? `Service online · ${modelLabel}` : "Service unavailable"}</span>
             <button type="button" className="dashboard-secondary-button" onClick={handleRefresh}><RefreshCw size={15} className={loadingOverview || loadingSessions ? "dashboard-spin" : ""} /> Refresh</button>
             <a href="/admin/prompts" className="dashboard-secondary-button">Prompt studio</a>
             <a href="/" className="dashboard-primary-button"><Camera size={15} /> Open photobooth</a>
@@ -608,7 +593,7 @@ export default function Dashboard() {
             <section className="dashboard-panel dashboard-hourly-panel"><div className="dashboard-panel-heading"><div><p className="dashboard-panel-kicker">Operations</p><h2>Activity by hour</h2></div><span className="dashboard-panel-meta">Local booth time</span></div><HourlyChart values={overview?.hourly_activity || []} /></section>
             <section className="dashboard-panel dashboard-table-panel">
               <div className="dashboard-table-toolbar">
-                <form className="dashboard-search" onSubmit={handleSearchSubmit}><Search size={16} aria-hidden="true" /><input value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder="Search session ID or story…" aria-label="Search sessions" /><button type="submit" aria-label="Search"><ArrowLeft size={14} /></button></form>
+                <form className="dashboard-search" onSubmit={handleSearchSubmit}><Search size={16} aria-hidden="true" /><input value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder="Search session ID or story…" aria-label="Search sessions" /><button type="submit">Search</button></form>
                 <div className="dashboard-filter-group"><label><Filter size={14} /><span className="visually-hidden">Story</span><select value={scenarioFilter} onChange={handleFilterChange(setScenarioFilter)}><option value="">All stories</option>{SCENARIOS.map((scenario) => <option value={scenario.id} key={scenario.id}>{scenario.name}</option>)}</select></label><label><span className="visually-hidden">Status</span><select value={statusFilter} onChange={handleFilterChange(setStatusFilter)}><option value="">All statuses</option><option value="success">Completed</option><option value="failed">Failed</option><option value="running">In progress</option></select></label><button type="button" className="dashboard-export-button" onClick={handleExport} disabled={isExporting}><FileDown size={15} />{isExporting ? "Exporting…" : "Export CSV"}</button></div>
               </div>
               <div className="dashboard-table-heading"><div><p className="dashboard-panel-kicker">History</p><h2>Customer sessions</h2></div><span>{meta.total_items || 0} total</span></div>
