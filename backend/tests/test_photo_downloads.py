@@ -23,7 +23,7 @@ from backend.app.config import Settings
 from backend.app.photo_api import PhotoService, create_photo_router
 from backend.app.photo_store import FirebasePhotoStore
 
-def jpeg_fixture(size=(2160, 4378)):
+def jpeg_fixture(size=(2160, 4301)):
     output = BytesIO()
     with Image.new("RGB", size, "white") as image:
         image.save(output, "JPEG", quality=1)

@@ -127,8 +127,8 @@ def create_photo_router(service):
                 raise HTTPException(400, "A final JPEG photo is required.")
             try:
                 with Image.open(BytesIO(content)) as final_image:
-                    if final_image.format != "JPEG" or final_image.size != (2160, 4378):
-                        raise HTTPException(400, "The final photo must be a 2160×4378 JPEG.")
+                    if final_image.format != "JPEG" or final_image.size != (2160, 4301):
+                        raise HTTPException(400, "The final photo must be a 2160×4301 JPEG.")
                     final_image.load()
             except (UnidentifiedImageError, OSError):
                 raise HTTPException(400, "The final JPEG photo is corrupt.") from None
