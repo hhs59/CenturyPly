@@ -13,10 +13,17 @@ const GENERATION_MESSAGES = [
 function PortraitSpinner() {
   return (
     <div className="portrait-spinner" role="img" aria-label="Portrait generation in progress">
-      <span className="portrait-spinner-ring" />
+      <span className="portrait-spinner-glow" aria-hidden="true" />
+      <span className="portrait-spinner-orbit portrait-spinner-orbit-outer" aria-hidden="true">
+        <span className="portrait-spinner-light" />
+      </span>
+      <span className="portrait-spinner-orbit portrait-spinner-orbit-middle" aria-hidden="true" />
+      <span className="portrait-spinner-orbit portrait-spinner-orbit-inner" aria-hidden="true">
+        <span className="portrait-spinner-light" />
+      </span>
       <span className="portrait-spinner-core">
         <strong>CP</strong>
-        <small>Imperial portrait</small>
+        <small>Portrait studio</small>
       </span>
     </div>
   );

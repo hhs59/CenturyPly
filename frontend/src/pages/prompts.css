@@ -358,7 +358,7 @@
 
 .prompts-reference-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -467,7 +467,7 @@
   .prompts-header-actions { justify-content: flex-start; }
   .prompts-workspace { grid-template-columns: 1fr; }
   .prompts-scenario-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .prompts-reference-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .prompts-reference-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 560px) {

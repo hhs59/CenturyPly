@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+from io import BytesIO
 import mimetypes
 import os
 from pathlib import Path
 from threading import RLock
 from typing import Any
+
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 from .prompts import REFERENCE_ROOT, SCENARIO_CONFIGS, SCENARIO_IDS, default_prompt_configuration, split_scenario_prompt
 
@@ -17,21 +20,56 @@ REFERENCE_DIRECTORY_NAME = "prompt_references"
 MAX_BASE_PROMPT_LENGTH = 40_000
 MAX_SCENARIO_PROMPT_LENGTH = 12_000
 REQUIRED_BASE_PLACEHOLDERS = ("{people_count}", "{variation_hint}", "{pose_expression}")
-REFERENCE_ROLES = ("male_clothing", "female_clothing", "location")
+REFERENCE_ROLES = ("male_clothing", "female_clothing", "location", "style")
 REFERENCE_MIME_EXTENSIONS = {
     "image/jpeg": ".jpg",
     "image/png": ".png",
     "image/webp": ".webp",
 }
+REFERENCE_MAX_EDGE = {
+    "male_clothing": 1600,
+    "female_clothing": 1600,
+    "location": 1920,
+    "style": 1600,
+}
+REFERENCE_JPEG_QUALITY = 85
 REFERENCE_LABELS = {
     "male_clothing": "ẢNH 2 — mẫu tham chiếu trang phục nam; chỉ lấy trang phục",
     "female_clothing": "ẢNH 3 — mẫu tham chiếu trang phục nữ; chỉ lấy trang phục",
     "location": "ẢNH 4 — mẫu tham chiếu địa điểm; chỉ lấy kiến trúc và không gian",
+    "style": "ẢNH 5 — mẫu dàn dựng nghệ thuật; chỉ lấy bố cục, ánh sáng và màu sắc",
 }
 
 
 class PromptConfigurationError(ValueError):
     """Raised when the admin submits an unsafe or incomplete prompt config."""
+
+
+def optimize_reference_image(image_bytes: bytes, role: str) -> bytes:
+    """Resize and normalize a reference without changing its crop or composition."""
+
+    try:
+        with Image.open(BytesIO(image_bytes)) as source:
+            image = ImageOps.exif_transpose(source)
+            image.thumbnail((REFERENCE_MAX_EDGE[role], REFERENCE_MAX_EDGE[role]), Image.Resampling.LANCZOS)
+            if image.mode in {"RGBA", "LA"} or "transparency" in image.info:
+                rgba = image.convert("RGBA")
+                flattened = Image.new("RGB", rgba.size, "white")
+                flattened.paste(rgba, mask=rgba.getchannel("A"))
+                image = flattened
+            elif image.mode != "RGB":
+                image = image.convert("RGB")
+            output = BytesIO()
+            image.save(
+                output,
+                format="JPEG",
+                quality=REFERENCE_JPEG_QUALITY,
+                optimize=True,
+                progressive=True,
+            )
+            return output.getvalue()
+    except (KeyError, OSError, UnidentifiedImageError) as exc:
+        raise PromptConfigurationError("Reference image could not be optimized.") from exc
 
 
 def _text(value: Any, field_name: str, max_length: int) -> str:
@@ -156,8 +194,12 @@ class PromptStore:
             "male_clothing": config["male"],
             "female_clothing": config["female"],
             "location": config["location"],
+            "style": config["style"],
         }[role]
-        default_directory = "locations" if role == "location" else "clothing"
+        default_directory = {
+            "location": "locations",
+            "style": "styles",
+        }.get(role, "clothing")
         return REFERENCE_ROOT / default_directory / default_name
 
     def reference_urls(self) -> dict[str, dict[str, str]]:
@@ -184,18 +226,18 @@ class PromptStore:
 
     def save_reference(self, scenario_id: str, role: str, image_bytes: bytes, mime_type: str) -> Path:
         self.validate_reference_key(scenario_id, role)
-        extension = REFERENCE_MIME_EXTENSIONS.get(mime_type)
-        if not extension:
+        if mime_type not in REFERENCE_MIME_EXTENSIONS:
             raise PromptConfigurationError("Reference image format is not supported.")
+        optimized_bytes = optimize_reference_image(image_bytes, role)
 
         with self._lock:
             directory = self.reference_dir / scenario_id
             directory.mkdir(parents=True, exist_ok=True)
             for candidate in self._reference_candidates(scenario_id, role):
                 candidate.unlink(missing_ok=True)
-            target = directory / f"{role}{extension}"
+            target = directory / f"{role}.jpg"
             temporary_path = directory / f".{role}.uploading"
-            temporary_path.write_bytes(image_bytes)
+            temporary_path.write_bytes(optimized_bytes)
             os.replace(temporary_path, target)
             return target
 

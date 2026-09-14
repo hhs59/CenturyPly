@@ -68,7 +68,6 @@ class ImageGenerationService:
             )
 
         parts = [
-            {"text": prompt},
             {"text": "ẢNH 1 — ảnh tham chiếu nhận diện khách; chỉ lấy danh tính khuôn mặt"},
             {
                 "inline_data": {
@@ -87,6 +86,7 @@ class ImageGenerationService:
                     },
                 },
             ])
+        parts.append({"text": f"YÊU CẦU THIẾT KẾ:\n{prompt}"})
 
         payload = {
             "contents": [{"role": "user", "parts": parts}],

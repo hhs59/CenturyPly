@@ -35,7 +35,12 @@ const REFERENCE_FIELDS = [
   {
     role: "location",
     label: "Location · ẢNH 4",
-    hint: "Architecture and environment only.",
+    hint: "Architectural identity and real landmark details.",
+  },
+  {
+    role: "style",
+    label: "Art direction · ẢNH 5",
+    hint: "9:16 composition, guest area, lighting, depth, and colour only.",
   },
 ];
 
@@ -380,7 +385,7 @@ function Prompts() {
                 <div className="prompts-reference-heading">
                   <div>
                     <p className="prompts-kicker">Reference images</p>
-                    <h3>Clothing and location references</h3>
+                    <h3>Clothing, location, and art direction</h3>
                   </div>
                   <span>Used in the next generation</span>
                 </div>

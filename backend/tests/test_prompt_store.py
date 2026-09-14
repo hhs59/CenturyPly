@@ -1,7 +1,10 @@
 import json
+from io import BytesIO
 import tempfile
 import unittest
 from pathlib import Path
+
+from PIL import Image
 
 from backend.app.prompt_store import (
     MAX_BASE_PROMPT_LENGTH,
@@ -10,6 +13,12 @@ from backend.app.prompt_store import (
     PromptStore,
 )
 from backend.app.prompts import build_image_generation_prompt, default_prompt_configuration
+
+
+def reference_image_bytes(size=(2000, 1200)):
+    output = BytesIO()
+    Image.new("RGB", size, "#8a5b3d").save(output, format="PNG")
+    return output.getvalue()
 
 
 class PromptStoreTests(unittest.TestCase):
@@ -140,15 +149,33 @@ class PromptStoreTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             store = PromptStore(directory)
             default_path = store.reference_path("hue_imperial_city", "location")
-            store.save_reference("hue_imperial_city", "location", b"replacement", "image/png")
+            store.save_reference("hue_imperial_city", "location", reference_image_bytes(), "image/png")
 
             override_path = store.reference_path("hue_imperial_city", "location")
             self.assertNotEqual(override_path, default_path)
-            self.assertEqual(store.load_references("hue_imperial_city")[2][1], b"replacement")
-            self.assertEqual(store.load_references("hue_imperial_city")[2][2], "image/png")
+            self.assertEqual(override_path.suffix, ".jpg")
+            self.assertEqual(store.load_references("hue_imperial_city")[2][2], "image/jpeg")
+            with Image.open(override_path) as optimized:
+                self.assertLessEqual(max(optimized.size), 1920)
 
             store.reset_reference("hue_imperial_city", "location")
             self.assertEqual(store.reference_path("hue_imperial_city", "location"), default_path)
+
+    def test_style_reference_is_loaded_and_can_be_overridden(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = PromptStore(directory)
+            default_path = store.reference_path("hue_imperial_city", "style")
+
+            self.assertEqual(default_path.parent.name, "styles")
+            self.assertTrue(default_path.is_file())
+            self.assertEqual(store.load_references("hue_imperial_city")[3][0].split(" — ")[0], "ẢNH 5")
+
+            store.save_reference("hue_imperial_city", "style", reference_image_bytes(), "image/png")
+            self.assertEqual(store.reference_path("hue_imperial_city", "style").suffix, ".jpg")
+            self.assertEqual(store.load_references("hue_imperial_city")[3][2], "image/jpeg")
+
+            store.reset_reference("hue_imperial_city", "style")
+            self.assertEqual(store.reference_path("hue_imperial_city", "style"), default_path)
 
 
 if __name__ == "__main__":

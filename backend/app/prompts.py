@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -16,31 +15,35 @@ def _lines(*values: str) -> str:
 
 
 _COMPOSITION_RULES = (
-    "một người chiếm khoảng 52–62% chiều cao ảnh, đứng giữa hoặc lệch nhẹ; đầu, mặt, hai tay, gấu áo và hai bàn chân đều nằm trong khung.",
-    "cặp hai người cân bằng, mặt có kích thước tương đương và cùng mặt phẳng nét; có khe hở nhỏ giữa thân, vai không dính, tay không chéo qua mặt hoặc thân người kia.",
-    "ba người xếp tam giác/vòng cung nông, không ai nhỏ hơn đáng kể; mọi mặt không bị che, không có đầu trực tiếp sau đầu khác, sáu bàn tay và gấu áo/chân phân biệt được.",
-    "bốn người xếp vòng cung nông hoặc hai trung tâm/hai bên trên một lớp sâu; bốn đầu tách biệt, không hai hàng sâu, tay không cắt qua mặt/thân và tất cả bàn chân cùng gấu áo còn trong khung.",
+    "chụp toàn thân, thấy rõ đầu, hai tay, gấu áo và hai bàn chân; chừa một khoảng nền nhỏ dưới chân.",
+    "hai người có kích thước cân bằng, mặt cùng rõ nét, thân có khoảng hở; thấy đủ bốn bàn tay và bốn bàn chân.",
+    "đúng đội hình ba người đã mô tả; các đầu không chồng nhau, thấy đủ sáu bàn tay và sáu bàn chân.",
+    "đúng đội hình bốn người và độ sâu đã mô tả; các đầu tách biệt, thấy đủ tám bàn tay và tám bàn chân.",
+)
+
+_PORTRAIT_EXPRESSION = (
+    "Tất cả khách nhìn thẳng vào máy ảnh với mắt sáng và nụ cười nhẹ, tươi, tự nhiên; không cười quá rộng. "
+    "Giữ biểu cảm riêng của từng người, không sao chép khuôn miệng hoặc nụ cười."
 )
 
 
-def _pose_variants(
-    names: tuple[str, str, str],
-    actions: tuple[tuple[str, str, str, str], tuple[str, str, str, str], tuple[str, str, str, str]],
-    expressions: tuple[str, str, str],
+def _signature_pose(
+    name: str,
+    actions: tuple[str, str, str, str],
+    expression: str,
 ) -> str:
-    lines: list[str] = []
-    for number, (name, count_actions, expression) in enumerate(zip(names, actions, expressions, strict=True), start=1):
-        lines.append(f"BIẾN THỂ {number} — {name}")
-        for count, (action, composition) in enumerate(zip(count_actions, _COMPOSITION_RULES, strict=True), start=1):
-            lines.append(f"- {count} người: {action} Giữ {composition}")
-        lines.append(f"- Biểu cảm: {expression}")
+    lines = [f"BIẾN THỂ 1 — {name}"]
+    for count, (action, composition) in enumerate(zip(actions, _COMPOSITION_RULES, strict=True), start=1):
+        lines.append(f"- {count} người: {action} Giữ {composition}")
+    lines.append(f"- Biểu cảm: {expression} {_PORTRAIT_EXPRESSION}")
     return "\n".join(lines)
 
 
 def _clothing(details: str, reference: str) -> str:
     return (
         f"{details} "
-        f"Chỉ dùng {reference} để lấy trang phục và phụ kiện; không sao chép khuôn mặt, tỷ lệ cơ thể, tóc, tư thế, vị trí tay, hướng nhìn, biểu cảm, góc máy, ánh sáng hoặc hậu cảnh người mẫu."
+        f"{reference} chỉ tham khảo trang phục và phụ kiện. Bỏ qua hoàn toàn người mẫu/mannequin, cơ thể, tay chân, "
+        "tư thế, ánh sáng và hậu cảnh trong ảnh tham chiếu."
     )
 
 
@@ -52,11 +55,11 @@ SCENARIO_CONFIGS = {
             "KIẾN TRÚC BẮT BUỘC:",
             "Tái dựng đúng Đoan Môn của Hoàng Thành Thăng Long trong ẢNH 4: bệ thành gạch đá dài đã nhuốm thời gian có năm cửa vòm, cửa chính giữa lớn nhất và bốn cửa nhỏ hơn ở hai bên; phía trên là lầu trung tâm ba tầng, mái ngói cong và tường vàng đất. Đây là công trình bắt buộc, không thay bằng một cổng cung đình bất kỳ.",
             "DẤU HIỆU NHẬN DIỆN BẮT BUỘC:",
-            "Trong một lần nhìn phải thấy đồng thời đủ năm cửa vòm, khối lầu trung tâm ba tầng và mảng tường thành gạch xám–vàng kéo dài. Giữ đúng nhịp một cửa lớn ở giữa và hai cửa nhỏ mỗi bên, hình khối, vật liệu cùng góc nhìn ba phần tư của ẢNH 4.",
+            "Trong khung dọc phải thấy rõ khối lầu trung tâm ba tầng, cửa chính lớn và ít nhất một cửa nhỏ ở mỗi bên. Giữ đúng nhịp tổng thể năm cửa vòm, hình khối, vật liệu cùng góc nhìn ba phần tư của ẢNH 4; cho phép hai đầu ngoài của tường thành nằm ngoài khung để khách không bị thu nhỏ.",
             "BỐ CỤC KHÔNG GIAN:",
-            "Đặt nhóm khách trên sân ở tiền cảnh, lệch nhẹ khỏi trục để cửa chính giữa, ít nhất hai cửa bên và lầu trung tâm còn nhìn rõ. Công trình chiếm phần lớn nửa trên hậu cảnh, đủ nét để nhận ra ngay; không làm mờ mạnh và không để mái hoặc cạnh cổng xuyên qua đầu người.",
+            "Bố cục chính diện, uy nghi và gần đối xứng: khách đứng giữa sân gạch, Đoan Môn hiện lên như một đại cổng khổng lồ chiếm phần lớn hậu cảnh. Hai đoạn tường thành và các cửa vòm tạo khung hai bên; góc máy hơi thấp làm lầu trung tâm cao lớn nhưng không biến dạng. Giữ rõ cửa chính và ít nhất một cửa bên ở mỗi phía; không xóa phông mạnh.",
             "ÁNH SÁNG VÀ MÀU SẮC:",
-            "Ánh sáng ban ngày miền Bắc trong trẻo, bóng mềm. Bảng màu gồm gạch ấm, đỏ son tiết chế, xanh chàm đậm, gỗ nâu và sắc kiến trúc đã cũ; da người tự nhiên.",
+            "Bình minh nghi lễ trong trẻo: mặt trời thấp chiếu xiên từ một bên, tạo viền sáng vàng dịu quanh khách và các tia nắng mảnh xuyên qua lớp sương rất nhẹ nhưng không che kiến trúc. Bắt buộc có mảng nắng trên sân gạch, tường cổ và một phía trang phục, cùng bóng người đổ dài mềm về hướng đối diện. Bầu trời chuyển sắc xanh lam–vàng kim có chiều sâu; da người vẫn trung tính, sáng khỏe.",
             "KHÔNG ĐƯỢC XUẤT HIỆN:",
             "Không có cổng Ngọ Môn sơn đỏ, nội thất ngai vàng Điện Thái Hòa, mặt tiền Pháp màu vàng của Cung An Định, lam bê tông Dinh Độc Lập, núi đá Hoa Lư, cung điện kỳ ảo kiểu Trung Hoa, biển hiệu/chữ hoặc đám đông.",
         ),
@@ -68,18 +71,20 @@ SCENARIO_CONFIGS = {
             "Khách nữ mặc áo tấc nghi lễ đỏ son với mấn được duyệt, cảm hứng cổ phục miền Bắc. Thân áo dài qua gối, nhiều lớp gọn, cổ đứng kín và hàng khuy trước thân; tay áo dài rộng vừa phải, lớp áo trong nhìn thấy. Vải lụa/gấm bóng vừa phải, thêu ở cổ, ngực, viền tay và viền tà; mấn không che mắt, quần dài và giày kín mũi khi thấy. Khi xoay hoặc bước nhẹ, tà áo chuyển động mềm và không che bàn chân.",
             "ẢNH 3",
         ),
-        "pose_expression": _pose_variants(
-            ("ĐÓN KHÁCH QUA ĐOAN MÔN", "BƯỚC TRÊN SÂN GẠCH", "TỰ HÀO TRƯỚC HOÀNG THÀNH"),
+        "pose_expression": _signature_pose(
+            "NGHI THỨC TIẾN QUA ĐOAN MÔN",
             (
-                ("đứng hơi lệch trục, một chân dẫn nhẹ và một tay giữ hờ tay áo.", "đứng thành cặp, một người tiến nửa bước và người kia xoay vai về Đoan Môn.", "tạo vòng cung nông hướng vào trục cổng, người giữa tiến nhẹ.", "tạo vòng cung nông một lớp, hai người giữa ở trục cổng và hai người ngoài xoay vào."),
-                ("bước chậm về máy ảnh trên sân gạch, vai mở và tà áo chuyển động.", "hai khách bước cùng hướng, một người dẫn rất ít và người kia xoay về bạn đồng hành.", "ba khách bước theo hàng cong nông, người giữa gần máy ảnh hơn rất ít.", "bốn khách tiến nhẹ theo vòng cung nông, không tạo hai hàng."),
-                ("đứng cân bằng hơi xoay ba phần tư, tay thả tự nhiên hoặc giữ hờ tay áo.", "đứng cạnh nhau với vai và hướng nhìn hơi khác.", "tạo tam giác nông, người giữa chỉ nhô nhẹ và hai bên xoay vào.", "tạo bố cục hai trung tâm/hai bên trên một lớp nông, vai và tay khác nhau."),
+                "đang bước nửa nhịp trên trục sân gạch như tiến qua cổng thành; một tay đánh nhẹ cạnh hông theo bước chân, tay kia mở thấp về Đoan Môn, hai bàn tay cách xa nhau và mặt hướng máy ảnh.",
+                "song hành tiến qua Đoan Môn theo hai nhịp lệch nhau: khách trái bước trước, một tay đánh ra sau và tay kia thả cạnh thân; khách phải lùi nửa nhịp, một lòng bàn tay mở thấp về cổng và tay còn lại thả tự nhiên.",
+                "tạo đoàn nghi lễ hình mũi tên: khách giữa tiến trước một bước với hai tay đánh tự nhiên ngược nhịp chân; khách trái ở sau mở một tay thấp về cổng, tay kia thả cạnh thân; khách phải xoay vai ba phần tư, một tay ở ngang hông và tay kia đưa nhẹ ra sau.",
+                "tạo đội hình đường chéo tiến lễ từ trái trước đến phải sau, khác hẳn đội hình ba người: lần lượt từ trái sang phải, khách 1 mở một tay thấp về cổng, khách 2 đánh hai tay tự nhiên khi bước, khách 3 đặt một tay ở hông và tay kia thả cạnh thân, khách 4 xoay vai vào nhóm với hai tay buông tách rời.",
             ),
-            ("điềm tĩnh, tự tin, hiếu khách và tự hào; nụ cười nhẹ khác nhau.", "tự tin và thân thiện; ánh mắt có thể lệch nhẹ về Đoan Môn nhưng mặt vẫn rõ.", "tự hào kín đáo, bình tĩnh và trang trọng; không diễn kịch."),
+            "tự hào, hiếu khách và trang trọng như đoàn khách quý vừa tiến qua cổng chính.",
         ),
         "male": "thang-long-imperial-male.jpg",
         "female": "thang-long-imperial-female.jpg",
         "location": "thang-long-imperial-scene.jpg",
+        "style": "thang-long-imperial-style-v2.jpg",
     },
     "hoa_lu_capital": {
         "concept_prompt": _lines(
@@ -90,9 +95,9 @@ SCENARIO_CONFIGS = {
             "DẤU HIỆU NHẬN DIỆN BẮT BUỘC:",
             "Dãy núi karst đá vôi phải chiếm đường chân trời và hiện rõ phía trên mái Đền Vua Đinh; hai trụ biểu đá, lối đi chính giữa và lan can đá phải dẫn mắt thẳng tới chính điện. Các yếu tố này phải xuất hiện đồng thời và bám sát ẢNH 4.",
             "BỐ CỤC KHÔNG GIAN:",
-            "Đặt khách trên phần lối đi trống ở tiền cảnh, tránh che cả hai trụ biểu, mái chính điện và đỉnh núi. Chính điện nằm giữa hậu cảnh, núi cao hiện rõ hai bên và phía trên; dùng độ sâu trường ảnh vừa phải để đá, mái và núi vẫn nhận diện được.",
+            "Bố cục chính diện, trang nghiêm và gần đối xứng: khách đứng giữa lối đá dẫn vào đền, chính điện lớn nằm trực diện phía sau, núi đá vôi dựng cao như bức thành thiên nhiên. Hai trụ biểu cùng đôi nghê đá Việt Nam đúng lịch sử có thể tạo khung cân bằng ở hai bên tiền cảnh; không dùng sư tử Trung Hoa kỳ ảo. Góc máy hơi thấp, nền đủ nét để nhận ra Hoa Lư ngay.",
             "ÁNH SÁNG VÀ MÀU SẮC:",
-            "Ánh sáng tự nhiên ấm của buổi sáng hoặc cuối buổi chiều, bóng mềm và da người tự nhiên. Bảng màu gồm xám đá, đỏ đất, nâu gỗ, xanh rừng và xanh xám núi.",
+            "Bình minh sau cơn mưa nhẹ: sương mỏng nằm giữa núi đá vôi, mây tách để nắng vàng dịu chiếu xiên thành vệt rõ xuống lối nghi lễ. Bắt buộc thấy nắng bắt trên vai, viền tóc, trụ biểu và nền gạch, cùng bóng người mềm kéo chéo trên mặt sân ẩm. Mặt đá và nền gạch chỉ phản chiếu rất nhẹ, không bóng như gương; núi, trụ biểu và chính điện vẫn rõ, da người sáng khỏe và không ám vàng.",
             "KHÔNG ĐƯỢC XUẤT HIỆN:",
             "Không dùng tường thành vàng Hoàng Thành, cổng đỏ Ngọ Môn, đại sảnh ngai vàng Huế, biệt thự Pháp, tòa nhà hiện đại, lâu đài kỳ ảo, sương che kín núi, tượng không liên quan, biển hiệu hoặc đám đông.",
         ),
@@ -104,31 +109,33 @@ SCENARIO_CONFIGS = {
             "Khách nữ mặc lễ phục xanh rừng đậm. Áo dài hoặc áo tấc dài qua gối, thân thanh thoát, cổ đứng kín và hàng khuy trước thân; tay áo dài rộng vừa phải, có lớp áo trong. Vải lụa/gấm rủ thật, thêu ở cổ, thân trước, viền tay và tà, màu phụ xanh rêu/vàng đồng tiết chế; mấn được duyệt, quần dài và giày kín mũi. Khi đứng ổn định giữa sân, tà áo rơi thẳng và không che bàn chân.",
             "ẢNH 3",
         ),
-        "pose_expression": _pose_variants(
-            ("ĐỨNG CÙNG NÚI ĐÁ", "KẾT NỐI VỚI SÂN ĐỀN", "NHÌN VỀ HOA LƯ"),
+        "pose_expression": _signature_pose(
+            "KHÍ PHÁCH TRƯỚC NON SÔNG HOA LƯ",
             (
-                ("đứng thẳng trước cổng, thân hơi xoay và hai tay đặt nhẹ trước thân.", "đứng cạnh nhau trên cùng mặt phẳng, khoảng hở nhỏ, vai và tay khác nhau.", "tạo tam giác nông, người giữa hơi tiến và hai bên hướng nhẹ về núi.", "tạo vòng cung nông trước cổng, cùng một lớp sâu và hai người ngoài xoay vào."),
-                ("một chân bước nhẹ, vai xoay theo cổng và một tay thả tự nhiên.", "một người bước rất nhẹ, người còn lại đứng cạnh nhưng không tạo hàng sâu.", "đứng lệch nhẹ thành cung nông, người giữa nhìn máy ảnh và hai bên hướng về cổng.", "tạo bố cục hai người trung tâm/hai bên trên mặt phẳng nông, vai khác nhau."),
-                ("đứng hơi lệch trục, mắt hướng nhẹ về núi nhưng mặt đủ rõ.", "một người nhìn máy ảnh, một người nhìn núi, đứng gần nhưng không chạm vai.", "vòng cung nông, người giữa quay về máy ảnh và hai bên hướng cảnh quan.", "vòng cung rộng vừa đủ thấy núi, bốn đầu tách biệt và không có hàng sau."),
+                "đứng vững trên lối gạch với chân mở nhẹ và vai xoay về dãy núi; một cẳng tay mở thấp về cảnh quan, tay kia buông thẳng cạnh thân, cằm nâng nhẹ và mặt hướng máy ảnh.",
+                "tạo cặp phản hướng vững chãi: khách trái đứng chính diện, một tay ở hông và tay kia buông cạnh thân; khách phải xoay ba phần tư về núi, một tay mở thấp về dãy karst và tay còn lại đưa nhẹ ra sau, hai người không chạm nhau.",
+                "xếp thành thế kiềng ba chân có chiều sâu: khách giữa tiến trước một bước với hai tay buông tách rời; khách trái phía sau mở một tay về trụ biểu, khách phải phía sau đặt một tay ở hông; tay còn lại của hai khách bên đều thả cạnh thân, không chắp tay cầu nguyện.",
+                "tạo đội hình kim cương vững chãi, khác hẳn nhóm ba người: khách 1 phía trước mở một tay thấp về chính điện; khách 2 và 3 ở giữa xoay vai ngược hướng, một người đặt tay ở hông và một người mở tay về núi; khách 4 lùi nửa bước với hai tay buông tách rời, tất cả đứng trên lối gạch.",
             ),
-            ("ổn định, bình thản, ấm áp và tự hào kín đáo.", "tự tin tiết chế, ánh mắt có chiều sâu; một nụ cười nhẹ là đủ.", "điềm tĩnh, chân thành, tự hào và kết nối cảnh quan."),
+            "điềm tĩnh, ấm áp và kiêu hãnh; phong thái vững như địa thế núi bao quanh cố đô.",
         ),
         "male": "hoa-lu-capital-male.jpg",
         "female": "hoa-lu-capital-female.jpg",
         "location": "hoa-lu-capital-scene.jpg",
+        "style": "hoa-lu-capital-style-v2.jpg",
     },
     "hue_imperial_city": {
         "concept_prompt": _lines(
             "Ý NIỆM VÀ KHÔNG KHÍ:",
-            "Chân dung đón tiếp thanh lịch trong Đại Nội Huế, thể hiện vẻ mềm mại, quyền quý và hiếu khách của triều đình Nguyễn. Đây là ảnh đón tiếp cao cấp với người thật, không phải cung điện Đông Á kỳ ảo.",
+            "Chân dung đón tiếp thanh lịch trong Đại Nội Huế, đẹp như một khung phim di sản cao cấp: quyền quý, trong trẻo và hơi lý tưởng hóa nhưng vẫn là địa điểm thật.",
             "KIẾN TRÚC BẮT BUỘC:",
             "Tái dựng đúng Ngọ Môn theo ẢNH 4: đài thành đá–gạch hình chữ U có năm lối vào, phía trên là Lầu Ngũ Phụng bằng gỗ sơn son với chín bộ mái; mái chính giữa lợp ngói lưu ly vàng và tám mái còn lại lợp ngói xanh. Không đổi thành một cổng thành một tháp.",
             "DẤU HIỆU NHẬN DIỆN BẮT BUỘC:",
             "Trong khung hình dọc phải thấy rõ phần giữa của đài chữ U, cửa chính giữa, các lầu gỗ đỏ đối xứng và sự tương phản giữa mái vàng trung tâm với các mái xanh hai bên. Cho phép cắt bớt phần kéo dài ngoài cùng để phù hợp tỷ lệ 9:16, nhưng phải giữ hình khối Lầu Ngũ Phụng và đủ dấu hiệu nhận diện từ ẢNH 4.",
             "BỐ CỤC KHÔNG GIAN:",
-            "Đặt khách ở sân đá rộng phía trước, thấp hơn đường mái và không che cổng trung tâm. Phần nhận diện chính của Ngọ Môn nằm rõ ở nửa trên hậu cảnh; chỉ tách nền nhẹ để kiến trúc vẫn đủ nét.",
+            "Bố cục chính diện, quyền quý và gần đối xứng như ảnh mẫu Đại Nội Huế: khách đứng chính giữa trên sân đá, Ngọ Môn hiện lên lớn và uy nghi trực diện phía sau. Hiên gỗ, cột son và lan can đá tạo khung mạnh ở hai mép như một cổng nghi lễ; góc máy hơi thấp làm mái Lầu Ngũ Phụng nổi bật. Không che cửa trung tâm và chỉ tách nền rất nhẹ.",
             "ÁNH SÁNG VÀ MÀU SẮC:",
-            "Ánh sáng ban ngày vàng ấm nhưng tự nhiên, tương phản vừa phải và da người không bị vàng. Bảng màu sơn đỏ, mái ngói, xanh cổ vịt đậm, tím hoàng gia, gỗ nâu và vàng tiết chế.",
+            "Hoàng hôn ấm và sang trọng: nắng cuối ngày chiếu ngang từ một bên, lướt qua gỗ sơn son và ngói lưu ly, tạo viền sáng mềm quanh khách. Bắt buộc có một phía mặt và trang phục bắt nắng ấm, phía còn lại giữ bóng mềm có chi tiết, bóng người đổ chéo trên sân đá. Bầu trời chuyển từ xanh trong sang vàng hồng tiết chế; mái vàng và mái xanh bắt sáng tinh tế nhưng không phát quang giả, da người trung tính và sáng khỏe.",
             "KHÔNG ĐƯỢC XUẤT HIỆN:",
             "Không chuyển cảnh vào nội thất ngai vàng Điện Thái Hòa, không dùng cổng thành vàng Hoàng Thành Thăng Long, đền giữa núi Hoa Lư, bia mộ, công trình hiện đại, kiến trúc kỳ ảo kiểu Trung Hoa, chữ/biển hiệu hoặc khách du lịch.",
         ),
@@ -140,18 +147,20 @@ SCENARIO_CONFIGS = {
             "Khách nữ mặc áo Nhật Bình tím hoàng gia và mấn. Áo dài dưới gối, thân trang trọng, cổ đứng hoặc viền cổ kín, hàng khuy trước thân, tay áo dài rủ; lớp áo trong, quần dài và giày kín mũi khi phù hợp. Vải lụa/gấm bóng vừa phải, họa tiết hoa lá/cung đình được thêu tập trung ở cổ, ngực, tay và viền tà, mấn không che mắt. Khi xoay hoặc bước chậm, tà và tay áo chuyển động mềm, không giẫm lên chân.",
             "ẢNH 3",
         ),
-        "pose_expression": _pose_variants(
-            ("TIẾP ĐÓN TRONG SÂN ĐẠI NỘI", "ĐÓN KHÁCH TRÊN TRỤC KIẾN TRÚC", "NÉT DUYÊN CUNG ĐÌNH"),
+        "pose_expression": _signature_pose(
+            "CÁNH PHƯỢNG NGHÊNH KHÁCH TRƯỚC NGỌ MÔN",
             (
-                ("đứng ba phần tư, một tay nâng rất nhẹ mép tay áo và tay kia tự nhiên.", "đứng thành cặp với vai khác góc, một người hướng sân và một người hướng máy ảnh.", "tạo vòng cung nông, người giữa tiến nhẹ và hai bên xoay vào trung tâm.", "tạo vòng cung nông trước lớp cột/cổng, bốn mặt cùng lớp nét."),
-                ("bước chậm nửa nhịp về trước, vai mở và mặt hướng máy ảnh.", "hai người di chuyển nhẹ trên trục, một người dẫn và người kia xoay về trung tâm.", "xếp cung nông, người giữa tiến nhẹ và hai bên giữ độ cao mặt tương đương.", "hai người giữa tiến ít, hai người ngoài lùi ít để tạo cung một lớp."),
-                ("đứng nghiêng ba phần tư, một tay chạm hờ tay áo, cằm và vai thả lỏng.", "đứng cạnh nhau với khoảng cách nhỏ, hướng nhìn hơi khác.", "tạo tam giác nông, người giữa vừa đủ trung tâm và hai bên xoay vào.", "tạo hai trung tâm/hai bên, vai khác nhau và bốn đầu tách biệt."),
+                "đứng dáng chữ S rất nhẹ, thân xoay ba phần tư; một cánh tay mở chéo thấp ra ngoài làm đường cánh phượng, tay kia buông mềm cạnh tà áo, một chân đưa trước nửa bước và mặt hướng máy ảnh.",
+                "tạo đôi cánh phượng đối xứng: hai người xoay nhẹ vào nhau, mỗi người mở cánh tay phía ngoài chéo thấp theo hai hướng đối nhau và buông tay phía trong dọc thân; bốn bàn tay tách rời, không giao nhau.",
+                "tạo hình quạt ba cánh: khách giữa lùi nửa bước, đứng chính diện với hai tay buông thành hai đường dọc; khách trái và phải tiến nhẹ, xoay vai ra ngoài và mỗi người mở cánh tay ngoài ở một cao độ khác nhau, tay trong thả dọc thân, không dang tay như múa.",
+                "tạo hình cánh phượng bất đối xứng có hai lớp nông, khác nhóm ba người: khách 1 ngoài trái mở tay chéo thấp, khách 2 phía trước mở một tay ngang eo, khách 3 lùi nửa bước với hai tay buông tách rời, khách 4 ngoài phải mở tay chéo cao hơn nhẹ; các tay còn lại đều thả dọc thân.",
             ),
-            ("thanh lịch, điềm tĩnh, mềm mại; nụ cười nhẹ khác nhau.", "quyền quý nhưng gần gũi; không cười đồng loạt.", "tinh tế, tự tin, dịu và có thẩm quyền mềm."),
+            "duyên dáng, quyền quý và gần gũi; nét mềm của cung đình Huế nhưng không tạo dáng sân khấu.",
         ),
         "male": "hue-imperial-city-male.jpg",
         "female": "hue-imperial-city-female.jpg",
         "location": "hue-imperial-city-scene.jpg",
+        "style": "hue-imperial-city-style-v2.jpg",
     },
     "thai_hoa_palace": {
         "concept_prompt": _lines(
@@ -162,9 +171,9 @@ SCENARIO_CONFIGS = {
             "DẤU HIỆU NHẬN DIỆN BẮT BUỘC:",
             "Phải nhìn thấy đồng thời hai lớp mái vàng chạy ngang, bờ nóc trang trí rồng, hàng cột hiên và sân đá chính diện rộng. Giữ đúng tỷ lệ đại điện thấp, dài, đối xứng và không biến công trình thành Ngọ Môn nhiều lầu.",
             "BỐ CỤC KHÔNG GIAN:",
-            "Đặt khách trên sân Đại Triều Nghi ở tiền cảnh, lệch nhẹ khỏi trục cửa giữa. Chừa khoảng nhìn giữa nhóm để bậc thềm, hàng cột hiên và cả hai lớp mái vẫn rõ; không đặt khách trên hiên hoặc che kín cửa chính.",
+            "Bố cục chính diện, quyền uy và đối xứng theo trục đại lễ: khách đứng giữa sân Đại Triều Nghi, Điện Thái Hòa lớn và hai lớp mái vàng chiếm phần lớn hậu cảnh. Bậc đá, lan can chạm rồng và hàng cột son tạo khung nghi lễ hai bên; góc máy hơi thấp hướng về chính điện. Không đặt khách trên hiên, không che cửa chính và không xóa phông mạnh.",
             "ÁNH SÁNG VÀ MÀU SẮC:",
-            "Ánh sáng ban ngày dịu, hơi ấm, làm rõ ngói vàng, gỗ nâu đỏ và nền sân đá mà không cháy sáng. Da người tự nhiên, hậu cảnh đủ nét, không dùng đèn rọi kiểu sân khấu.",
+            "Bình minh đỏ–vàng mang khí chất đại lễ: nắng thấp chiếu xiên qua sân Đại Triều Nghi thành các dải sáng và bóng dài rõ ràng, không che hàng cột hoặc mái điện. Bắt buộc thấy ánh nắng bắt trên một phía gương mặt, vai áo và hàng cột, cùng bóng người nối với bàn chân và đổ về phía đối diện. Nền đá chỉ phản chiếu rất nhẹ, không bóng như gương; gương mặt vẫn tươi tự nhiên, không dùng đèn rọi sân khấu.",
             "KHÔNG ĐƯỢC XUẤT HIỆN:",
             "Không tạo nội thất ngai vàng, hàng cột rồng trong điện, mặt ngoài Ngọ Môn, cổng nhiều tầng, không để khách ngồi ngai, không vương miện khổng lồ, giáp kỳ ảo, đồ hiện đại, chữ giả hoặc vàng lấp kín cảnh.",
         ),
@@ -176,18 +185,20 @@ SCENARIO_CONFIGS = {
             "Khách nữ mặc lễ phục lấy cảm hứng từ phượng bào đỏ thẫm. Áo dài qua gối, thân gọn, cổ đứng kín, hàng khuy trước thân, tay áo dài và lớp áo trong ở cổ/tay; tà áo có trọng lượng. Vải gấm/lụa đỏ, điểm vàng/cam đồng; họa tiết phượng được thêu ở ngực, vai, tay, cổ và viền tà, không thành giáp hoặc váy dạ hội. Mấn đúng mẫu, quần dài và giày kín mũi. Khi xoay vai hoặc đặt tay trước thân, tà áo rơi tự nhiên và bàn chân rõ.",
             "ẢNH 3",
         ),
-        "pose_expression": _pose_variants(
-            ("TRỤC ĐẠI LỄ", "CỬ CHỈ NGHI LỄ TIẾT CHẾ", "ĐÓN TIẾP TRANG TRỌNG"),
+        "pose_expression": _signature_pose(
+            "THẾ ĐẠI TRIỀU TRƯỚC ĐIỆN THÁI HÒA",
             (
-                ("đứng cân bằng trên trục sân chầu, hai tay đặt nhẹ trước thân.", "đứng đối xứng mềm trên sân với khoảng hở nhỏ, không che cửa giữa.", "người giữa hơi tiến, hai người bên lệch thành vòng cung nông để lộ bậc thềm và mái điện.", "tạo cung nông hoặc hai trung tâm/hai bên trên sân đá, không che trục chính điện."),
-                ("thân hơi xoay ba phần tư trên sân, một tay thả dọc tà áo và tay kia tự nhiên.", "một người xoay vào trung tâm, người kia hướng nhẹ về chính điện, tay không giao nhau.", "tạo vòng cung nông trước bậc thềm, người giữa nhìn máy ảnh và hai bên hướng về giữa.", "hai người giữa cân bằng, hai người ngoài xoay vào trên cùng một lớp, chừa khoảng nhìn tới cửa giữa."),
-                ("đứng hơi lệch trục trước chính điện như chủ nhà, một chân dẫn nhẹ và tay giữ hờ tà.", "đứng cân bằng trước bậc thềm nhưng hướng vai khác nhau.", "tạo tam giác nông trên sân đá, người giữa tiến rất ít và hai bên giữ vai mở.", "tạo cung nông với hai trung tâm và hai bên trước hàng cột hiên, bốn đầu cách nhau rõ."),
+                "đứng chính diện trên trục sân chầu, hai bàn chân song song và vai hạ; một tay buông thẳng cạnh thân, cẳng tay kia mở thấp với lòng bàn tay hướng vào điện, hai tay không chạm nhau và cằm ngang.",
+                "đứng tách hai bên trục chính điện: khách trái xoay vai vào giữa, một tay mở thấp về cửa và tay kia buông cạnh thân; khách phải đứng chính diện, một tay đặt ở hông và tay kia buông thẳng, tạo thế nghi lễ cân bằng nhưng không sao chép.",
+                "tạo đội hình phẩm cấp hình tam giác: khách giữa tiến trước nửa bước với hai tay buông tách rời; khách trái phía sau mở một cẳng tay thấp về điện, khách phải phía sau đặt một tay ở hông; tay còn lại của hai khách bên thả cạnh thân, không quỳ hoặc cúi lạy.",
+                "tạo bố cục bốn trụ trên hai lớp nông, khác nhóm ba người: hai khách trong tiến nửa bước, một người mở tay về cửa và người kia đặt tay ở hông; hai khách ngoài lùi nhẹ, một người buông hai tay tách rời và người kia mở một tay thấp về hàng cột; không ai chắp tay hoặc giấu tay trong tay áo.",
             ),
-            ("uy nghi, bình tĩnh, tự tin; nụ cười rất nhẹ.", "thẩm quyền mềm và tự chủ, không cười đồng loạt.", "trang trọng, điềm đạm, tự hào và chuyên nghiệp."),
+            "uy nghi, bình tĩnh và hiếu khách; nụ cười tiết chế phù hợp không gian đại lễ, không nghiêm nghị hoặc lạnh lùng.",
         ),
         "male": "thai-hoa-palace-male.jpg",
         "female": "thai-hoa-palace-female.jpg",
         "location": "thai-hoa-palace-scene.jpg",
+        "style": "thai-hoa-palace-style-v1.jpg",
     },
     "an_dinh_palace": {
         "concept_prompt": _lines(
@@ -198,9 +209,9 @@ SCENARIO_CONFIGS = {
             "DẤU HIỆU NHẬN DIỆN BẮT BUỘC:",
             "Mảng tường vàng, cột trắng, phù điêu hoa lá trắng, ban công con tiện và trán giữa cầu kỳ phải cùng hiện diện. Giữ góc nhìn hơi thấp và chính diện như ẢNH 4 để mặt tiền nhận ra ngay; đây không phải biệt thự Pháp màu trắng thông thường.",
             "BỐ CỤC KHÔNG GIAN:",
-            "Đặt khách ở sân tiền cảnh, lệch khỏi trục cửa và ban công để ít nhất hai tầng mặt tiền cùng phần trán giữa còn nhìn rõ. Không để cây hoặc họa tiết trang trí che người hay che các phù điêu nhận diện.",
+            "Bố cục chính diện, sang trọng và gần đối xứng: khách đứng giữa sân hoặc đầu bậc thềm, Khải Tường Lâu vươn lớn phía sau như một dinh thự nghi lễ. Hai hàng cột trắng, bậc thang và phù điêu hoa lá tạo khung mạnh hai bên; góc máy hơi thấp làm phần trán giữa và ban công nổi bật. Giữ rõ ít nhất hai tầng mặt tiền, không để trang trí che người.",
             "ÁNH SÁNG VÀ MÀU SẮC:",
-            "Ánh sáng ấm mềm như cuối buổi chiều hoặc dưới hiên. Bảng màu vàng cung điện, trắng ngà, xanh lam ngọc, gỗ nâu và xanh cây tiết chế; vải và da không bóng nhựa.",
+            "Cuối buổi chiều thanh lịch: nắng xiên mềm từ một bên làm mặt tiền vàng mù tạt sáng ấm, đồng thời tạo bóng phù điêu và bóng cột có chiều sâu. Bắt buộc thấy vệt nắng trên tóc, vai và một phía trang phục, bóng người đổ mềm trên sân về hướng đối diện. Bầu trời xanh lam nhạt và vùng sáng kem tạo phối màu điện ảnh kem–xanh–vàng, sang trọng nhưng không rực giả; da và vải giữ kết cấu tự nhiên.",
             "KHÔNG ĐƯỢC XUẤT HIỆN:",
             "Không biến thành mặt tiền trắng đối xứng của Dinh Gia Long, không lam bê tông Dinh Độc Lập, không cổng thành/mái cung đình, phòng khiêu vũ kiểu Pháp chung chung, chi tiết trang trí kỳ ảo quá mức, người đi ngang hoặc vật thể hiện đại.",
         ),
@@ -212,31 +223,33 @@ SCENARIO_CONFIGS = {
             "Khách nữ mặc áo dài phong cách Nguyễn màu xanh lam ngọc. Thân áo dài qua gối, phom thanh lịch, cổ đứng kín, hàng khuy trước thân, tay dài và tà rủ; quần dài, lớp áo trong nếu có và giày kín mũi. Vải lụa/gấm bóng vừa phải, thêu vàng/xanh nhạt ở cổ, ngực, viền tay và dọc tà, không thành trang phục dạ hội đính kim sa; phụ kiện đầu được duyệt không che mắt. Khi xoay ba phần tư hoặc bước nhẹ, tà và tay áo chuyển động mềm.",
             "ẢNH 3",
         ),
-        "pose_expression": _pose_variants(
-            ("DUYÊN DÁNG TRƯỚC MẶT TIỀN", "BƯỚC NHẸ TRONG SÂN", "TIẾP KHÁCH TRONG KHOẢNG SÂN"),
+        "pose_expression": _signature_pose(
+            "DẠO BƯỚC TÂN CỔ ĐIỂN TRƯỚC KHẢI TƯỜNG LÂU",
             (
-                ("đứng ba phần tư trước mặt tiền, một tay giữ hờ tay áo.", "đứng thành cặp với khoảng hở nhỏ, vai khác góc và hướng nhẹ vào nhau.", "tạo tam giác nông trước cửa đối xứng, giữa nổi bật vừa phải.", "tạo vòng cung nông theo sân, giữa gần trục và ngoài xoay vào."),
-                ("một chân bước nhẹ, thân thả lỏng và vai hơi xoay.", "một người bước trước rất ít, người kia giữ nhịp bên cạnh.", "ba người đứng lệch thành cung nông, giữa nhìn máy ảnh và hai bên nhìn vào nhau.", "hai người giữa tiến nhẹ, hai người bên giữ khoảng hở cùng một lớp sâu."),
-                ("đứng hơi lệch để lộ mặt tiền, vai mở và một tay hướng về không gian.", "đứng cạnh nhau, một người hướng máy ảnh và người kia hướng mặt tiền.", "tạo vòng cung nông, giữa hướng người xem và hai bên xoay vào.", "tạo hai trung tâm/hai bên với vai và trọng tâm khác nhau."),
+                "tạo dáng thời trang đầu thế kỷ XX: thân xoay ba phần tư, hai chân bắt chéo nhẹ ở cổ chân; một tay đặt ở hông, tay kia buông dài cạnh tà áo và mặt hướng máy ảnh.",
+                "tạo cặp phản hướng thanh lịch, gần lưng nhưng không chạm: khách trái bắt chéo chân và đặt một tay ở hông, tay kia buông thẳng; khách phải bước ngang nhẹ, một tay chạm rất nhẹ cổ áo và tay kia mở chéo thấp ra ngoài.",
+                "tạo đường chéo thời trang ba nhịp: khách trái tiến trước với một tay ở hông và tay kia buông dọc thân; khách giữa lùi nửa bước, một tay sửa nhẹ mép cổ áo và tay kia buông thẳng; khách phải xoay ba phần tư, mở một tay chéo thấp và thả tay còn lại cạnh thân, không ai lặp dáng.",
+                "tạo bố cục lookbook zigzag bất đối xứng, khác nhóm ba người: khách 1 bắt chéo chân với một tay ở hông, khách 2 bước tới với hai tay đánh nhẹ, khách 3 đứng chính diện với một tay chạm cổ áo và tay kia buông, khách 4 xoay ra ngoài với một tay mở chéo thấp; mọi người ở cao độ tay khác nhau.",
             ),
-            ("thân thiện, tinh tế, tự tin; nụ cười nhẹ.", "nhẹ nhàng, hiếu khách và thanh lịch; mức cười khác nhau.", "duyên dáng, ấm áp, điềm tĩnh và có phong thái chủ nhà."),
+            "thanh lịch, duyên dáng và tự tin như chân dung thời trang tân cổ điển; không catwalk, khiêu vũ hoặc tạo dáng cường điệu.",
         ),
         "male": "an-dinh-palace-male.jpg",
         "female": "an-dinh-palace-female.jpg",
         "location": "an-dinh-palace-scene.jpg",
+        "style": "an-dinh-palace-style-v2.jpg",
     },
     "independence_palace": {
         "concept_prompt": _lines(
             "Ý NIỆM VÀ KHÔNG KHÍ:",
-            "Chân dung nghi lễ hiện đại tại Dinh Độc Lập/Dinh Thống Nhất, thể hiện khách mời quốc tế hòa mình vào văn hóa Việt Nam với phong thái tự tin, trang trọng và gần gũi. Đây là bộ ảnh đón tiếp cao cấp, không phải cảnh cung đình cổ.",
+            "Chân dung nghi lễ hiện đại tại Dinh Độc Lập/Dinh Thống Nhất, đẹp như ảnh quảng cáo di sản cao cấp: thanh lịch, sáng trong và hơi lý tưởng hóa nhưng vẫn chân thực.",
             "KIẾN TRÚC BẮT BUỘC:",
             "Tái dựng đúng mặt tiền chính Dinh Độc Lập trong ẢNH 4: khối nhà hiện đại thấp và rất rộng màu trắng–xám, hàng lam bê tông đứng lặp đều như rèm hoa đá, ban công trung tâm, đài phun nước tròn và thảm cỏ xanh lớn phía trước.",
             "DẤU HIỆU NHẬN DIỆN BẮT BUỘC:",
             "Trong khung hình dọc phải thấy rõ nhịp lam bê tông đứng, ban công giữa, đài phun nước tròn và thảm cỏ. Cho phép cắt đối xứng phần ngoài cùng của hai cánh nhà để phù hợp tỷ lệ 9:16, nhưng phải giữ trục chính diện và đủ dấu hiệu để nhận ra ngay Dinh Độc Lập, không phải văn phòng hiện đại bất kỳ.",
             "BỐ CỤC KHÔNG GIAN:",
-            "Đặt toàn bộ khách trên lối đi lát đá hoặc khu vực sân cứng dành cho khách tham quan phía trước Dinh Độc Lập. Thảm cỏ xanh và đài phun nước nằm hoàn toàn phía sau nhóm khách như một phần của hậu cảnh. Bàn chân của mọi khách tiếp xúc rõ ràng với mặt đường lát đá; không đặt hoặc cho khách bước trên thảm cỏ. Nhóm hơi lệch khỏi trục giữa để không che vòi phun và ban công. Phần trung tâm cùng nhịp lam đặc trưng nằm rõ ở nửa trên hậu cảnh và vẫn đủ nét; chỉ tách nền nhẹ.",
+            "Bố cục chính diện, mạnh mẽ và gần đối xứng như ảnh mẫu Dinh Độc Lập: khách đứng chính giữa trên nền đá của sảnh hoặc khu vực sân cứng, mặt tiền Dinh hiện lên lớn trực diện phía sau. Các mảng lam bê tông, khung cửa và mái sảnh tạo hai cánh kiến trúc bao quanh khách; góc máy hơi thấp làm công trình có sức nặng. Bàn chân tiếp xúc rõ với nền đá, không đứng trên cỏ và chỉ tách nền rất nhẹ.",
             "ÁNH SÁNG VÀ MÀU SẮC:",
-            "Ánh sáng ban ngày miền Nam sáng, mềm và sạch, tương phản vừa phải. Da người tự nhiên; kiến trúc trắng/xám, cỏ xanh, trang phục tím hoặc ngà là điểm màu chính. Không dùng đèn rọi tím/vàng giả hoặc hiệu ứng tương phản động quá mức.",
+            "Giờ vàng miền Nam sạch và hiện đại: nắng thấp chiếu chéo từ phía sau bên, tạo viền sáng tinh tế quanh tóc và vai trong khi bù sáng mềm giữ rõ gương mặt. Bắt buộc có nắng bắt trên nhịp lam bê tông, điểm lấp lánh nhỏ trên đài phun và bóng người dài mềm trên lối lát đá, nối đúng dưới bàn chân. Thảm cỏ chỉ nằm phía sau; bầu trời xanh–vàng trong trẻo, da người sáng khỏe và không dùng màu tím/vàng giả.",
             "KHÔNG ĐƯỢC XUẤT HIỆN:",
             "Không có mặt tiền thuộc địa với cột/vòm của Dinh Gia Long, mặt tiền vàng Cung An Định, mái cung đình Nguyễn, cột rồng, đền chùa, ngai vàng, lâu đài châu Âu, chữ/biển hiệu, giao thông hoặc người đi ngang.",
         ),
@@ -248,18 +261,20 @@ SCENARIO_CONFIGS = {
             "Khách nữ mặc áo dài nghi lễ tím hoàng gia: cổ đứng kín, thân ôm tự nhiên không bó, hàng khuy trước thân, tay áo dài, hai tà dài rủ, quần lụa và giày kín mũi. Lụa bóng vừa phải, thêu vàng ở thân trước, cổ, tay và dọc tà; không cổ khoét sâu, xuyên thấu hay váy dạ hội, phụ kiện đầu chỉ theo mẫu. Khi bước hoặc xoay vai, hai tà tách mềm và không che chân. Giữ dáng toàn thân cân đối, thanh lịch và tự nhiên; không sao chép bố cục hoặc tư thế từ ảnh trang phục.",
             "ẢNH 3",
         ),
-        "pose_expression": _pose_variants(
-            ("ĐỨNG TRÊN TRỤC MẶT TIỀN", "ĐÓN KHÁCH TRÊN LỐI TIẾP CẬN", "HÒA NHẬP VÀO DI SẢN HIỆN ĐẠI"),
+        "pose_expression": _signature_pose(
+            "BƯỚC TIẾN TRÊN LỐI ĐỘC LẬP",
             (
-                ("đứng giữa hoặc hơi lệch trục trên lối lát đá, vai mở và một chân tự nhiên.", "đứng thành cặp cân bằng trên lối lát đá với khoảng hở nhỏ, vai và tay khác nhau.", "tạo vòng cung nông trên lối lát đá, giữa tiến nhẹ và hai bên xoay vào trục.", "tạo vòng cung nông hoặc hai trung tâm/hai bên trên lối lát đá trước mặt tiền."),
-                ("bước nhẹ trên trục lối vào, vai mở và tay thả tự nhiên.", "hai khách bước cùng hướng, một người dẫn và người kia xoay về bạn đồng hành.", "ba khách xếp cung nông theo lối vào, giữa tiến rất ít.", "bốn khách tiến nhẹ trong cung nông, hai người ngoài lùi ít, không hàng sâu."),
-                ("đứng ba phần tư để vừa thấy mặt tiền vừa giữ dáng tự nhiên.", "đứng cạnh nhau, vai mở, hướng nhìn hơi khác, không chạm vai.", "tạo tam giác nông, giữa hướng máy ảnh và hai bên hướng nhẹ ra ngoài.", "tạo hai trung tâm/hai bên với khoảng cách rõ giữa bốn đầu."),
+                "bước tự tin giữa nhịp trên lối lát đá, vai mở; một tay mở nhẹ ở ngang hông như giới thiệu mặt tiền và tay kia đánh tự nhiên theo bước chân, không đứng trên cỏ.",
+                "đi song hành trên lối lát đá với bước chân lệch nhịp: khách trái bước trước, hai tay đánh tự nhiên; khách phải lùi nửa nhịp, một lòng bàn tay mở về mặt tiền và tay kia đưa nhẹ ra sau, bốn tay không chạm nhau.",
+                "tạo đội hình chữ V tiến tới: khách giữa dẫn trước với một tay mở ngang hông về đài phun và tay kia đánh ra sau; khách trái phía sau đánh hai tay theo bước chân; khách phải phía sau đặt một tay ở hông và mở tay kia thấp về Dinh.",
+                "tạo đội hình hai cặp so le trên lối lát đá, khác nhóm ba người: khách 1 và 3 tiến trước ở hai nhịp chân đối nhau, khách 2 và 4 lùi nửa bước; lần lượt từ trái sang phải là hai tay đánh tự nhiên, một tay mở về Dinh, một tay đặt ở hông và một tay mở về đài phun, các tay còn lại buông hoặc đánh theo bước chân; không chào quân đội.",
             ),
-            ("tự tin, thân thiện, chuyên nghiệp; nụ cười tự nhiên khác mức.", "cởi mở, vui nhẹ và hiện đại; mặt vẫn rõ.", "tự nhiên, ấm áp, tự tin và phù hợp đón tiếp khách mời quan trọng."),
+            "trẻ trung, tự tin và cởi mở như một đoàn khách quốc tế đang tiến vào công trình hiện đại.",
         ),
         "male": "independence-palace-male.jpg",
         "female": "independence-palace-female.jpg",
         "location": "independence-palace-scene.jpg",
+        "style": "independence-palace-style-v2.jpg",
     },
     "gia_long_palace": {
         "concept_prompt": _lines(
@@ -270,9 +285,9 @@ SCENARIO_CONFIGS = {
             "DẤU HIỆU NHẬN DIỆN BẮT BUỘC:",
             "Trong khung hình dọc phải thấy rõ sảnh mái cong với bốn cột tròn, bậc thang, phần trán mái tam giác và một phần hàng cột/cửa của ít nhất một cánh nhà. Cho phép cắt bớt mép ngoài hai cánh để phù hợp tỷ lệ 9:16, nhưng phải giữ màu trắng–kem và cấu trúc sảnh đúng ẢNH 4.",
             "BỐ CỤC KHÔNG GIAN:",
-            "Đặt khách ở tiền cảnh trên lối xe trước bậc thang, lệch nhẹ khỏi khối sảnh để bốn cột, mái cong và trán tam giác còn rõ. Mặt tiền chiếm phần lớn hậu cảnh, ít nhất một phần hai cánh nhà vẫn nhìn thấy và đủ nét để nhận diện; không xóa phông mạnh.",
+            "Bố cục chính diện, uy nghi và gần đối xứng: khách đứng giữa lối đá trước bậc thang, sảnh trung tâm Dinh Gia Long cùng bốn cột lớn vươn cao trực diện phía sau. Hai cánh nhà, lan can đá và hàng cột cổ điển tạo khung quyền lực hai bên; góc máy hơi thấp nhấn mạnh mái cong và trán tam giác. Mặt tiền chiếm phần lớn hậu cảnh và không xóa phông mạnh.",
             "ÁNH SÁNG VÀ MÀU SẮC:",
-            "Ánh sáng miền Nam ấm và trong, bóng mềm, da người tự nhiên. Bảng màu kem/đá sáng, gỗ, cây xanh, đỏ mận sẫm trên nam phục và xanh ngọc trên nữ phục; tránh vàng cung đình mạnh.",
+            "Chạng vạng xanh thanh lịch: ánh sáng kiến trúc vàng ấm từ sảnh và cửa sổ là nguồn sáng chính, hắt có hướng lên bậc thang, hàng cột và một phía khách; ánh xanh của bầu trời tạo viền lạnh nhẹ ở phía đối diện. Bắt buộc có chuyển sắc xanh–hổ phách trên mặt và trang phục, bóng tiếp xúc rõ dưới chân và bóng mềm đổ về vùng sân tối hơn. Mặt đường chỉ phản chiếu rất nhẹ như vừa qua mưa; gương mặt vẫn sáng, ấm và tự nhiên.",
             "KHÔNG ĐƯỢC XUẤT HIỆN:",
             "Không dùng lam bê tông và khối ngang thấp của Dinh Độc Lập; không dùng mặt tiền vàng nhiều phù điêu của Cung An Định, không dựng lâu đài ba tầng nhiều vòm, vườn tròn cây cọ, chi tiết đại điện Huế, cổng thành, máy bay, trực thăng, xe cộ, chữ hoặc đám đông.",
         ),
@@ -284,18 +299,20 @@ SCENARIO_CONFIGS = {
             "Khách nữ mặc áo dài hoặc áo ngũ thân xanh ngọc và mấn. Phom áo dài qua gối, cổ đứng kín, hàng khuy trước thân, tay áo dài và tà rủ; lớp áo trong nếu mẫu có, quần dài và giày kín mũi. Vải lụa/gấm bóng vừa, thêu vàng nhạt, màu kem và xanh đậm ở cổ, thân trước, tay và viền tà; mấn không che mắt. Khi xoay hoặc bước nhẹ, tà áo mềm và bàn chân tách nền.",
             "ẢNH 3",
         ),
-        "pose_expression": _pose_variants(
-            ("PHONG THÁI THANH LỊCH", "DẠO QUA SÂN TRƯỚC", "TIẾP KHÁCH TRƯỚC CÔNG TRÌNH"),
+        "pose_expression": _signature_pose(
+            "NGHI THỨC ĐÓN KHÁCH TẠI TIỀN SẢNH GIA LONG",
             (
-                ("đứng ba phần tư, một chân hơi đưa trước và tay đặt gần eo.", "đứng cạnh nhau với vai/hướng nhìn khác nhau, khoảng hở nhỏ.", "tạo tam giác nông trước dãy cửa, giữa nhô nhẹ và hai bên hướng trung tâm.", "tạo cung nông hoặc hai trung tâm/hai bên, bốn đầu có khoảng cách."),
-                ("bước chậm, một tay giữ hờ tà áo và mắt hướng máy ảnh.", "bước cùng hướng, một người dẫn nhẹ và người kia xoay về bạn đồng hành.", "xếp cung nông theo lối đi, người giữa tiến rất ít.", "bốn người đi nhẹ trên một lớp nông, hai người ngoài xoay vào trục."),
-                ("đứng hơi lệch để lộ mặt tiền, vai mở và một tay hướng không gian.", "đứng gần nhưng không chạm, một người nhìn máy ảnh và một người nhìn mặt tiền.", "người giữa hướng máy ảnh, hai bên xoay nhẹ ra ngoài.", "tạo hai trung tâm/hai bên với vai và trọng tâm khác nhau, giữ khoảng trống."),
+                "đứng lệch trục tiền sảnh, thân xoay ba phần tư về bậc thang; bàn tay gần công trình mở hướng lên ở ngang eo như lời mời vào sảnh, tay kia buông dọc thân và mặt hướng máy ảnh.",
+                "đứng thành cặp chủ nhà hai bên lối vào: khách trái mở tay phía trong về bậc thang và buông tay ngoài; khách phải đặt một tay ở hông, tay còn lại mở chéo thấp về cửa, tạo hai cử chỉ đón tiếp khác nhau.",
+                "tạo đội hình cổng chào ba điểm: khách giữa lùi nửa bước trước cửa với hai tay buông tách rời; khách trái tiến nhẹ và mở một tay về bậc thang; khách phải xoay ba phần tư, một tay đặt ở hông và tay kia mở về sảnh, không ai lặp cử chỉ.",
+                "tạo hành lang đón khách bằng hai cặp so le, khác nhóm ba người: khách 1 và 4 lùi nhẹ hai bên với tay ngoài buông thẳng; khách 2 tiến trước và mở tay về cửa; khách 3 tiến trước nửa bước, đặt một tay ở hông và mở tay kia về bậc thang; bốn cơ thể tạo khoảng trống dẫn mắt vào sảnh.",
             ),
-            ("điềm đạm, thanh lịch, ấm áp và có chiều sâu; cười kín đáo.", "tự tin, thân thiện và tự nhiên; không phô trương.", "bình tĩnh, trang nhã, ấm áp và đáng tin cậy; không nghi lễ cứng."),
+            "ấm áp, trang nhã và đáng tin cậy như chủ nhà đang mời khách bước vào một dinh thự lịch sử.",
         ),
         "male": "gia-long-palace-male.jpg",
         "female": "gia-long-palace-female.jpg",
         "location": "gia-long-palace-scene.jpg",
+        "style": "gia-long-palace-style-v2.jpg",
     },
 }
 
@@ -304,77 +321,39 @@ SCENARIO_IDS = frozenset(SCENARIO_CONFIGS)
 ALLOWED_PEOPLE_COUNTS = frozenset({1, 2, 3, 4})
 PROMPT_SCENARIO_FIELDS = ("concept_prompt", "male_clothing", "female_clothing", "pose_expression")
 
-BASE_IMAGE_GENERATION_PROMPT = """=== VAI TRÒ VÀ MỤC ĐÍCH ===
-Bạn là đạo diễn hình ảnh cho trải nghiệm buồng chụp ảnh AI "Dấu Ấn Hoàng Gia – The Imperial Connection" của Century Ply. Tạo một ảnh chân dung di sản Việt Nam cao cấp, biến nhóm khách trong ẢNH 1 thành nhân vật mặc cổ phục trong bối cảnh chủ đề đã chọn. Đây là ảnh chụp người thật phục vụ khách mời quan trọng, không phải tranh minh họa hay cảnh kỳ ảo.
+BASE_IMAGE_GENERATION_PROMPT = """=== YÊU CẦU ===
+Tạo một ảnh dọc 9:16, 2K, toàn thân, photorealistic cinematic như ảnh quảng cáo du lịch và lookbook cao cấp. Chỉ tạo đúng {people_count} người là khách chính; không có chữ trong ảnh AI.
+BẮT BUỘC thay toàn bộ quần áo hiện đại trong ẢNH 1 bằng cổ phục được chỉ định. Không giữ lại áo, quần, giày hoặc phụ kiện hiện đại từ ẢNH 1.
 
-=== SỐ KHÁCH VÀ CHỌN NHÓM TIỀN CẢNH ===
-- Số khách cần xuất hiện: đúng {people_count} người, không hơn không kém.
-- Trong ẢNH 1, chỉ sử dụng đúng {people_count} khuôn mặt lớn nhất, gần camera nhất và tạo thành nhóm tiền cảnh chính. Bỏ qua hoàn toàn mọi người nhỏ hơn, xa hơn, đi ngang phía sau, xuất hiện trên màn hình, áp phích, tranh, tượng hoặc ảnh phản chiếu.
-- Giữ thứ tự nhận diện trái sang phải của nhóm tiền cảnh chính để không hoán đổi khuôn mặt giữa các nhân vật.
-- Không tái tạo bất kỳ người phụ, khách qua đường hoặc khuôn mặt nền nào thành nhân vật chính.
+=== NHÂN VẬT ===
+- Chọn {people_count} khuôn mặt lớn nhất và gần máy ảnh nhất trong ẢNH 1; bỏ qua mọi người phía sau, màn hình, áp phích, tranh, tượng và ảnh phản chiếu.
+- ẢNH 1 là nguồn duy nhất cho danh tính. Giữ mỗi người dễ nhận ra, tách biệt; không sao chép, trộn hoặc hoán đổi khuôn mặt.
+- Người có diện mạo nữ: mặt thon nhẹ, oval V-line tự nhiên, tóc chuyên nghiệp và trang điểm nhẹ. Người có diện mạo nam: mặt thon nhẹ, đường hàm cân đối, tóc gọn và da khỏe.
+- Người trưởng thành trông trẻ hơn khoảng 5 tuổi: da sáng, đều màu, giảm quầng thâm, dấu hiệu mệt mỏi và nếp nhăn sâu nhưng vẫn giữ kết cấu da thật. Trẻ em giữ đúng độ tuổi.
 
-=== BẢO TOÀN NHẬN DIỆN ===
-- ẢNH 1 là nguồn duy nhất cho danh tính khuôn mặt, hình dáng mặt, màu da tự nhiên, độ tuổi nhìn thấy, kính, kiểu tóc, râu, ria mép và đặc điểm cá nhân.
-- Giữ tự nhiên tông da của khách Ấn Độ; không làm trắng da, đổi sắc tộc, làm trẻ hóa, làm thon mặt hoặc biến một người thành người khác.
-- Giữ kính khi không che mắt, giữ râu/ria mép và kiểu tóc đặc trưng; chỉ để phụ kiện đầu được duyệt che một phần tóc. Đây là hướng dẫn tạo ảnh, không phải lời hứa về độ chính xác sinh trắc học.
-- Không sao chép tư thế, cử chỉ, góc máy hoặc biểu cảm ban đầu của ẢNH 1; chỉ dùng danh tính và đặc điểm nhận diện cần thiết.
+=== ẢNH THAM CHIẾU ===
+- ẢNH 1: chỉ lấy danh tính.
+- ẢNH 2–3 là mẫu trang phục bắt buộc, không phải gợi ý phong cách. Chỉ lấy trang phục và phụ kiện; bỏ hoàn toàn người mẫu/mannequin, khuôn mặt, cơ thể, tay chân và tư thế trong ảnh, không sao chép bất kỳ bộ phận cơ thể nào.
+- ẢNH 4: lấy đúng địa điểm và kiến trúc thật.
+- ẢNH 5: chỉ tham khảo bố cục, màu và ánh sáng; không được thay đổi địa điểm từ ẢNH 4.
 
-=== VAI TRÒ CỦA TỪNG ẢNH THAM CHIẾU ===
-ẢNH 1 — ẢNH NHẬN DIỆN KHÁCH:
-- Chỉ lấy danh tính và các đặc điểm nhận diện của đúng nhóm tiền cảnh đã chọn.
-
-ẢNH 2 — MẪU TRANG PHỤC NAM:
-- Chỉ tham khảo trang phục: kiểu dáng, cấu trúc lớp áo, cổ áo, hàng khuy phía trước, tay áo, chất liệu, màu sắc, hoa văn, thêu, khăn đóng hoặc phụ kiện đầu, quần và giày.
-- Tuyệt đối không sao chép khuôn mặt, tỷ lệ cơ thể, tóc, tư thế, vị trí tay, hướng nhìn, biểu cảm, góc chụp, ánh sáng hoặc hậu cảnh người mẫu.
-
-ẢNH 3 — MẪU TRANG PHỤC NỮ:
-- Chỉ tham khảo trang phục: kiểu dáng, cấu trúc lớp áo, cổ áo, hàng khuy phía trước, tay áo, tà áo, chất liệu, màu sắc, hoa văn, thêu, mấn hoặc phụ kiện đầu, quần và giày.
-- Tuyệt đối không sao chép khuôn mặt, tỷ lệ cơ thể, tóc, tư thế, vị trí tay, hướng nhìn, biểu cảm, góc chụp, ánh sáng hoặc hậu cảnh người mẫu.
-
-ẢNH 4 — MẪU ĐỊA ĐIỂM:
-- Đây là bản thiết kế hình ảnh bắt buộc của hậu cảnh, không chỉ là gợi ý phong cách. Tái dựng đúng cùng địa điểm, mặt đứng chủ đạo, hình khối, số tầng, nhịp cột/cửa, vật liệu, bảng màu và góc nhìn đặc trưng trong ẢNH 4.
-- Được điều chỉnh ranh giới khung hình từ ảnh mẫu ngang sang ảnh dọc 9:16, nhưng không đổi phối cảnh đặc trưng hoặc làm mất các dấu hiệu nhận diện bắt buộc được nêu trong phần BỐI CẢNH.
-- Không thay địa điểm bằng một cung điện, đền, cổng thành, biệt thự hoặc tòa nhà khác dù cùng thời kỳ hay cùng vùng miền. Phần BỐI CẢNH giải thích các dấu hiệu nào của ẢNH 4 bắt buộc phải giữ.
-- Công trình phải đủ lớn và đủ nét để người xem nhận ra trong hai giây; không xóa phông mạnh, dùng sương, cây, người hoặc hiệu ứng ánh sáng che các dấu hiệu kiến trúc chính.
-- Chỉ bỏ qua người, khuôn mặt, chữ, biểu trưng, hình mờ và vật thể thừa có trong ẢNH 4; không bỏ qua hoặc sáng tạo lại cấu trúc nhận diện của công trình.
-
-=== PHÂN BỔ TRANG PHỤC TRONG NHÓM ===
-- Dùng cách trình bày nam/nữ phù hợp với từng khách trong ẢNH 1, không suy đoán hoặc thay đổi danh tính.
-- Với nhóm hỗn hợp, áp dụng riêng mẫu ẢNH 2 cho khách nam và mẫu ẢNH 3 cho khách nữ; không trộn hai mẫu thành một trang phục sai.
-- Giữ tỷ lệ cơ thể thật và làm cho trang phục phù hợp với tư thế đã chọn.
-
-=== TƯ THẾ VÀ BIỂU CẢM ĐÃ CHỌN ===
-- Biến thể tư thế bắt buộc: BIẾN THỂ {variation_hint}.
-- Trong phần TƯ THẾ VÀ BIỂU CẢM, chỉ thực hiện đúng biến thể này và đúng dòng dành cho {people_count} người. Không kết hợp với biến thể khác.
+=== TRANG PHỤC VÀ TƯ THẾ ===
+- Xác định diện mạo nam/nữ độc lập cho từng khách trong ẢNH 1. Không giả định nhóm phải có cả nam và nữ; tất cả khách có thể cùng là nữ hoặc cùng là nam. Giữ nguyên biểu hiện giới tính của từng người, không nam hóa người nữ và không nữ hóa người nam. Nếu không chắc chắn, ưu tiên giữ nguyên biểu hiện giới tính trong ẢNH 1.
+- Phân trang phục nam/nữ riêng cho từng khách theo diện mạo đã xác định; không trộn hai mẫu. Vải và tay áo rủ tự nhiên.
+- Chỉ dùng BIẾN THỂ {variation_hint} dành cho {people_count} người:
 {pose_expression}
-- Không dùng tư thế của ảnh mẫu trang phục hoặc ảnh ví dụ.
-- Hai bàn tay của từng khách phải để trống, nhìn thấy rõ và ở tư thế tự nhiên; khách không cầm, mang, đeo hoặc tương tác với bất kỳ đạo cụ hay vật thể nào.
-- Không tạo sách, bản đồ, cuộn giấy, quạt, ô, vũ khí, điện thoại, máy ảnh, túi, hoa, cốc, trang sức cầm tay hoặc bất kỳ vật thể nào trong tay hay gắn vào người, kể cả khi vật thể đó phù hợp với chủ đề.
+- Làm đúng vị trí của từng khách và từng cánh tay trong tư thế trên. Không tự đổi thành hàng ngang hoặc dáng đứng chắp tay.
+- Mỗi khách chỉ có đúng hai cánh tay và hai bàn tay, đều nhìn thấy rõ và thuộc về chính người đó. Không có tay thừa, tay lặp, chi mannequin hoặc ống tay áo thừa; không tạo sách, bản đồ, quạt, điện thoại, hoa, vũ khí hay đạo cụ khác.
 
-=== MÁY ẢNH VÀ ÁNH SÁNG ===
-- Góc máy ngang tầm mắt, phối cảnh tự nhiên như máy ảnh cảm biến toàn khung với tiêu cự 35–50mm.
-- Không dùng góc siêu rộng, ống kính mắt cá hoặc làm méo khuôn mặt, cơ thể và kiến trúc.
-- Ánh sáng chính mềm, tự nhiên và có hướng; chiếu rõ khuôn mặt của tất cả khách.
-- Dùng ánh sáng bù nhẹ để giữ chi tiết da, mắt và trang phục; không để khuôn mặt bị tối.
-- Độ sâu trường ảnh vừa phải: khách sắc nét, hậu cảnh tách nhẹ nhưng công trình đặc trưng vẫn phải rõ và nhận diện được ngay.
-- Màu sắc sạch, hiện đại, cao cấp; tương phản vừa phải và tông da tự nhiên.
-- Không xóa phông mạnh, không vùng nhòe sáng lớn che kiến trúc, không cháy sáng, không hiệu ứng tương phản động quá mức và không dùng ánh sáng trường quay không phù hợp với bối cảnh.
+=== BỐI CẢNH, ÁNH SÁNG VÀ MÁY ẢNH ===
+- Tái dựng đúng concept và địa điểm được mô tả bên dưới; công trình phải đủ rõ để nhận ra ngay.
+- Bố cục chính diện, cân đối và gần đối xứng: khách ở trung tâm tiền cảnh, công trình nhận diện nằm trực diện phía sau. Khách chiếm khoảng 55–65% chiều cao khung hình; nền vẫn rõ và không bị xóa phông mạnh.
+- Làm bối cảnh đẹp hơn thực tế một cách tiết chế: màu sắc giàu, chiều sâu điện ảnh, ánh sáng mềm và một lớp không khí óng nhẹ như phim di sản cao cấp. Không tạo kiến trúc giả, phép thuật, hào quang hoặc chi tiết fantasy quá mức.
+- Nguồn sáng của concept là nguồn sáng chính, kết hợp bù sáng mềm để gương mặt sáng đẹp. Ánh sáng và bóng đổ trên người phải cùng hướng với bối cảnh, không giống ảnh cắt ghép.
+- Màu phim 35 mm hiện đại, tương phản vừa, vùng sáng mềm, vùng tối sạch và hạt phim rất mịn. Máy thấp hơn tầm mắt một chút và hướng lên rất nhẹ để công trình có sức nặng, không dùng góc siêu rộng hoặc làm biến dạng người; thấy đủ đầu, tay, gấu áo và bàn chân.
 
-=== BỐ CỤC VÀ GIẢI PHẪU ===
-- Ảnh dọc 9:16, tầm mắt, chất lượng 2K, phong cách ảnh biên tập giàu chất điện ảnh như ảnh chụp sự kiện cao cấp nhưng chân thực.
-- Toàn thân từng người nằm gọn trong khung: thấy đầu, mặt, tay, trang phục, gấu áo, chân và cả hai bàn chân; không cắt đỉnh đầu, bàn tay, gấu áo hoặc bàn chân.
-- Mọi khuôn mặt không bị che và có kích thước tương đối so sánh được; không đặt người trực tiếp sau đầu người khác.
-- Giữ khoảng cách nông giữa các thành viên; bàn tay không cắt qua mặt hoặc thân người khác; vai, trọng tâm và biểu cảm thay đổi nhẹ, không sao chép cùng một tư thế cho nhiều người.
-- Giữ chiều sâu đủ nông để mọi khuôn mặt rõ và tư thế vật lý phù hợp với cổ phục. Không tạo người bay, quỳ, ngồi, võ thuật, tay/ngón/chân dị dạng hoặc cơ thể dính nhau.
-- Giữ khoảng nền/sàn tự nhiên bằng 3–5% chiều cao ảnh dưới hai bàn chân hoặc gấu áo. Không tạo khoảng trống quá lớn. Photo Jacket sẽ được ứng dụng ghép bên ngoài ảnh sau khi AI hoàn tất.
-
-=== KHÔNG TẠO THƯƠNG HIỆU HOẶC CHỮ ===
-- Không tự vẽ chữ, biểu trưng, hình mờ, đường viền, khung, chân trang, khẩu hiệu, huy hiệu hoặc bất kỳ nhận diện Century Ply nào trong ảnh AI.
-- Không tạo biển hiệu/chữ giả, chữ lỗi, mặt nạ, khăn che mặt, da sáp, người trùng lặp, vật thể hiện đại hoặc đám đông phụ.
-- Photo Jacket và mọi thiết kế chân trang do ứng dụng ghép bên ngoài sau bước sinh ảnh; không yêu cầu Gemini tái tạo chúng.
-
-=== KẾT QUẢ ===
-Trả về đúng một ảnh hoàn chỉnh, không kèm mô tả hay nhiều phương án."""
+=== KIỂM TRA CUỐI ===
+Đúng {people_count} khách, đúng danh tính, đúng giới tính, đúng cổ phục, đúng tư thế và đúng địa điểm; toàn bộ khách đã thay cổ phục và không còn quần áo hiện đại. Không thêm người, không dị dạng cơ thể, không chữ, logo, watermark hoặc khung. Photo Jacket được ghép sau khi AI hoàn tất. Trả về đúng một ảnh."""
 
 
 def split_scenario_prompt(prompt: str) -> dict[str, str]:
@@ -414,10 +393,9 @@ def default_prompt_configuration() -> dict[str, Any]:
 
 
 def select_pose_variant(scenario_id: str, people_count: int, variation_key: str) -> int:
-    """Select a stable, human-readable pose variant number for one request."""
+    """Return the single approved signature pose for every concept and group size."""
 
-    seed = f"{scenario_id}:{people_count}:{variation_key or 'default'}".encode("utf-8")
-    return (hashlib.sha256(seed).digest()[0] % 3) + 1
+    return 1
 
 
 def select_pose_instructions(pose_expression: str, pose_variant: int, people_count: int) -> str:
@@ -509,5 +487,6 @@ def load_scenario_references(scenario_id: str) -> list[tuple[str, bytes, str]]:
         ("ẢNH 2 — mẫu tham chiếu trang phục nam; chỉ lấy trang phục", REFERENCE_ROOT / "clothing" / config["male"]),
         ("ẢNH 3 — mẫu tham chiếu trang phục nữ; chỉ lấy trang phục", REFERENCE_ROOT / "clothing" / config["female"]),
         ("ẢNH 4 — mẫu tham chiếu địa điểm; chỉ lấy kiến trúc và không gian", REFERENCE_ROOT / "locations" / config["location"]),
+        ("ẢNH 5 — mẫu dàn dựng nghệ thuật; chỉ lấy bố cục, ánh sáng và màu sắc", REFERENCE_ROOT / "styles" / config["style"]),
     )
     return [(label, path.read_bytes(), "image/jpeg") for label, path in files]

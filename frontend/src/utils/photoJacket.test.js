@@ -33,9 +33,9 @@ test("photo jacket renders a full 9:16 portrait followed by the branded footer",
 
   const blob = await createPhotoJacket(new Blob(["source"], { type: "image/jpeg" }), "Hue Imperial City");
 
-  assert.deepEqual(PHOTO_OUTPUT, { width: 2160, height: 4378, aspectRatio: "2160:4378" });
+  assert.deepEqual(PHOTO_OUTPUT, { width: 2160, height: 4301, aspectRatio: "2160:4301" });
   assert.equal(canvas.width, 2160);
-  assert.equal(canvas.height, 4378);
+  assert.equal(canvas.height, 4301);
   assert.equal(blob.type, "image/jpeg");
   assert.equal(calls.length, 1);
 });
