@@ -542,7 +542,7 @@ function CameraCapture({
             <ArrowLeft size={17} aria-hidden="true" /> Back
           </button>
           <button className="secondary-button" type="button" onClick={handleBackToCamera}>
-            <Camera size={17} aria-hidden="true" /> Take photo again
+            <Camera size={17} aria-hidden="true" /> Retake
           </button>
           <button className="primary-button" type="button" onClick={onProceed}>
             Continue <ArrowRight size={19} aria-hidden="true" />

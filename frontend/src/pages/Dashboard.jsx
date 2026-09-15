@@ -393,24 +393,24 @@ function SessionTable({ sessions, loading, onPhoto, onLogs }) {
               {Array.from({ length: 8 }, (_, cell) => <td key={cell}><span /></td>)}
             </tr>
           )) : sessions.length === 0 ? (
-            <tr><td colSpan="8"><EmptyState message="No generation sessions match these filters." /></td></tr>
+            <tr className="dashboard-empty-row"><td colSpan="8"><EmptyState message="No generation sessions match these filters." /></td></tr>
           ) : sessions.map((session) => (
-            <tr key={session.id}>
-              <td>
+            <tr key={session.id} className="dashboard-session-row">
+              <td data-label="Session">
                 <div className="dashboard-session-id"><strong>{session.name || "Guest group"}</strong><code>{session.id}</code><span>{session.people_count || 0} guest(s)</span></div>
               </td>
-              <td><span className="dashboard-story-pill">{scenarioName(session.scenario_id)}</span></td>
-              <td><span className={statusClass(session.status)}>{statusLabel(session.status)}</span>{session.error_message && <small className="dashboard-error-text">{session.error_message}</small>}</td>
-              <td>
+              <td data-label="Story"><span className="dashboard-story-pill">{scenarioName(session.scenario_id)}</span></td>
+              <td data-label="Status"><span className={statusClass(session.status)}>{statusLabel(session.status)}</span>{session.error_message && <small className="dashboard-error-text">{session.error_message}</small>}</td>
+              <td data-label="Images">
                 <div className="dashboard-thumb-pair">
                   <SessionThumbnail url={session.input_image_url} alt="Original photo" onClick={() => onPhoto({ url: session.input_image_url, title: `Original photo · ${session.id}` })} />
                   <SessionThumbnail url={session.output_image_url} alt="Generated portrait" accent onClick={() => onPhoto({ url: session.output_image_url, title: `Generated portrait · ${session.id}` })} />
                 </div>
               </td>
-              <td className="dashboard-metric dashboard-metric-warm">{session.render_duration ? `${session.render_duration}s` : "—"}</td>
-              <td className="dashboard-metric dashboard-metric-cyan">{session.download_count || 0}</td>
-              <td className="dashboard-date">{formatDate(session.created_at)}</td>
-              <td className="dashboard-table-action"><button type="button" className="dashboard-log-button" onClick={() => onLogs(session)}><Terminal size={14} /> Log</button></td>
+              <td data-label="Render" className="dashboard-metric dashboard-metric-warm">{session.render_duration ? `${session.render_duration}s` : "—"}</td>
+              <td data-label="Downloads" className="dashboard-metric dashboard-metric-cyan">{session.download_count || 0}</td>
+              <td data-label="Created" className="dashboard-date">{formatDate(session.created_at)}</td>
+              <td data-label="Actions" className="dashboard-table-action"><button type="button" className="dashboard-log-button" onClick={() => onLogs(session)}><Terminal size={14} /> Log</button></td>
             </tr>
           ))}
         </tbody>

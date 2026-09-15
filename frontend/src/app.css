@@ -679,9 +679,10 @@ summary:focus-visible {
 
 .camera-frame {
   position: relative;
-  width: min(100%, 940px);
-  height: min(61svh, 680px);
-  min-height: 250px;
+  width: min(100%, 900px);
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 4 / 3;
   overflow: hidden;
   margin: 0 auto;
   border: 8px solid rgba(255, 253, 249, 0.88);
@@ -694,7 +695,7 @@ summary:focus-visible {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   transform: scaleX(-1);
 }
 
@@ -1118,9 +1119,6 @@ summary:focus-visible {
     min-width: 190px;
   }
 
-  .camera-frame {
-    height: min(58svh, 600px);
-  }
 }
 
 @media (max-width: 680px) {
@@ -1211,7 +1209,8 @@ summary:focus-visible {
   }
 
   .camera-frame {
-    height: min(55svh, 520px);
+    height: auto;
+    aspect-ratio: 4 / 3;
     border-width: 5px;
     border-radius: 19px;
   }
@@ -1290,8 +1289,20 @@ summary:focus-visible {
     font-size: 0.78rem;
   }
 
-  .camera-frame {
-    height: min(51svh, 470px);
+}
+
+@media (min-width: 1400px) and (min-height: 800px) {
+  .hero-heading {
+    padding-top: 15px;
+    padding-bottom: 15px;
+  }
+
+  .brand-wordmark {
+    font-size: 1rem;
+  }
+
+  .hero-heading h1 {
+    font-size: 1.45rem;
   }
 }
 
