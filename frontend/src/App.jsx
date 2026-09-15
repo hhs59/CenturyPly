@@ -207,6 +207,10 @@ function PhotoboothApp() {
     setState((current) => ({ ...current, step: "camera_loading", photoFile: null, error: null }));
   }, []);
 
+  const handlePhotoBackToScenario = useCallback(() => {
+    setState((current) => ({ ...current, step: "scenario", photoFile: null, error: null }));
+  }, []);
+
   const handleCaptured = useCallback((file) => {
     setState((current) => ({
       ...current,
@@ -284,6 +288,7 @@ function PhotoboothApp() {
           error={state.error}
           faceDetection={faceDetection}
           isPhotoReady={state.step === "photo_ready"}
+          onBackToScenario={handlePhotoBackToScenario}
           onCancel={handleCameraCancel}
           onCaptured={handleCaptured}
           onGuestPresence={handleCameraPresence}

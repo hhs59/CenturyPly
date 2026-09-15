@@ -1,4 +1,4 @@
-import { ArrowRight, Camera, RefreshCw, RotateCcw, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, Camera, RefreshCw, RotateCcw, Upload } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import ErrorAlert from "./ErrorAlert.jsx";
 import { useCamera } from "../hooks/useCamera.js";
@@ -26,6 +26,7 @@ function CameraCapture({
   error,
   faceDetection,
   isPhotoReady,
+  onBackToScenario,
   onCancel,
   onCaptured,
   onGuestPresence,
@@ -46,6 +47,7 @@ function CameraCapture({
   const photoPreviewUrlRef = useRef("");
   const uploadRef = useRef(null);
   const mountedRef = useRef(true);
+  const inputModeRef = useRef("camera");
   const [phase, setPhase] = useState("camera_loading");
   const [inputMode, setInputMode] = useState("camera");
   const [countdownValue, setCountdownValue] = useState(null);
@@ -105,7 +107,7 @@ function CameraCapture({
   }, [peopleCount, setCameraPhase]);
 
   const capturePhoto = useCallback(async () => {
-    if (captureInProgressRef.current) {
+    if (captureInProgressRef.current || inputModeRef.current !== "camera") {
       return;
     }
     const captureToken = captureTokenRef.current + 1;
@@ -194,7 +196,7 @@ function CameraCapture({
   }, [detectImage, onCaptured, peopleCount, setCameraPhase, setPhotoPreview, stopCamera]);
 
   const handleDetection = useCallback((result, timestamp) => {
-    if (!mountedRef.current || captureInProgressRef.current || photoPreviewUrlRef.current) {
+    if (!mountedRef.current || inputModeRef.current !== "camera" || captureInProgressRef.current || photoPreviewUrlRef.current) {
       return;
     }
 
@@ -273,7 +275,7 @@ function CameraCapture({
         startCamera(videoRef.current),
         ensureReady(),
       ].map((promise) => promise.catch((error) => ({ ok: false, error }))));
-      if (cancelled || !mountedRef.current || captureInProgressRef.current || photoPreviewUrlRef.current) {
+      if (cancelled || !mountedRef.current || inputModeRef.current !== "camera" || captureInProgressRef.current || photoPreviewUrlRef.current) {
         return;
       }
       if (!cameraResult.ok) {
@@ -372,6 +374,7 @@ function CameraCapture({
 
   async function handleBackToCamera() {
     const wasUpload = inputMode === "upload";
+    inputModeRef.current = "camera";
     captureTokenRef.current += 1;
     captureInProgressRef.current = false;
     if (photoPreviewUrlRef.current) {
@@ -459,6 +462,7 @@ function CameraCapture({
   }
 
   const openUpload = () => {
+    inputModeRef.current = "upload";
     captureTokenRef.current += 1;
     captureInProgressRef.current = false;
     stopCamera();
@@ -470,6 +474,7 @@ function CameraCapture({
   };
 
   const useCameraInstead = () => {
+    inputModeRef.current = "camera";
     captureTokenRef.current += 1;
     captureInProgressRef.current = false;
     if (photoPreviewUrlRef.current) {
@@ -485,19 +490,20 @@ function CameraCapture({
 
   const cameraErrorState = captureError || cameraError || (detectorStatus === "error" ? detectorError : null) || error;
   const isDetectorError = detectorStatus === "error";
-  const visibleError = isPhotoReady ? null : inputMode === "upload" ? captureError : cameraErrorState;
+  const showPhotoReview = isPhotoReady && phase === "photo_ready" && Boolean(photoPreviewUrlRef.current);
+  const visibleError = showPhotoReview ? null : inputMode === "upload" ? captureError : cameraErrorState;
   const isUploadError = captureError?.code?.startsWith("UPLOAD_")
     || captureError?.code?.startsWith("IMAGE_");
 
   return (
-    <section className="content-card camera-card" aria-label={isPhotoReady ? "Review your photo" : "Camera capture"}>
-      {isPhotoReady && (
+    <section className="content-card camera-card" aria-label={showPhotoReview ? "Review your photo" : "Camera capture"}>
+      {showPhotoReview && (
         <div className="camera-card-heading">
           <h2 id="camera-heading">Review your photo</h2>
         </div>
       )}
 
-      <div className="camera-frame" aria-label={isPhotoReady ? "Photo preview" : photoPreviewUrlRef.current ? "Photo preview" : inputMode === "upload" ? "Photo upload" : "Live camera preview"}>
+      <div className="camera-frame" aria-label={showPhotoReview ? "Photo preview" : photoPreviewUrlRef.current ? "Photo preview" : inputMode === "upload" ? "Photo upload" : "Live camera preview"}>
         {inputMode === "camera" && <video ref={videoRef} className="camera-video" playsInline muted autoPlay />}
         {inputMode === "upload" && !photoPreviewUrlRef.current && (
           <div className="camera-upload-placeholder">
@@ -530,10 +536,13 @@ function CameraCapture({
       />
       <ErrorAlert error={visibleError} />
 
-      {isPhotoReady ? (
+      {showPhotoReview ? (
         <div className="photo-review-actions">
+          <button className="secondary-button" type="button" onClick={onBackToScenario}>
+            <ArrowLeft size={17} aria-hidden="true" /> Back
+          </button>
           <button className="secondary-button" type="button" onClick={handleBackToCamera}>
-            <RotateCcw size={17} aria-hidden="true" /> Back
+            <Camera size={17} aria-hidden="true" /> Take photo again
           </button>
           <button className="primary-button" type="button" onClick={onProceed}>
             Continue <ArrowRight size={19} aria-hidden="true" />
